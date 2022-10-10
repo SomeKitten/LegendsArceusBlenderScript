@@ -5,7 +5,7 @@
 # look as close to the original maxscript as possible.
 # That way, it's easier to compare the two and see what's different.
 
-# ***I have marked places where you need to change strings with "READ THIS:"***
+# ***I have marked places where you need to change variables with "READ THIS:"***
 
 # READ THIS: paste this into blender and run, make sure you change the path to this file's name
 # filename = "/home/kitten/PycharmProjects/Arceus/PokemonSwitch.py"
@@ -19,9 +19,15 @@ import struct
 import bpy
 
 
+# READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
+IN_BLENDER_ENV = False
+
+
 def from_trmdl(filep, trmdl):
-    vertices = []
-    faces = []
+    # make collection
+    if IN_BLENDER_ENV:
+        new_collection = bpy.data.collections.new('new_collection')
+        bpy.context.scene.collection.children.link(new_collection)
 
     trskl = None
     trmsh = None
@@ -738,8 +744,8 @@ def from_trmdl(filep, trmdl):
                                             else:
                                                 raise AssertionError("Unknown weights type!")
 
-                                            # vert_array.append((vx, vy, vz))
-                                            vertices.append([vx, vz, vy])  # ! Y and Z are swapped
+                                            # vert_array.append((vx, vz, vy))  # ! Y and Z are swapped
+                                            vert_array.append([vx, vz, vy])  # ! Y and Z are swapped
                                             # norm_array.append((nx, ny, nz))
                                             # # TODO vert_colors
                                             # # LINE 3157
@@ -749,12 +755,54 @@ def from_trmdl(filep, trmdl):
 
                                             print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
-                            # TODO faces
-                            # LINE 3170
+                            if vert_buffer_struct_ptr_faces != 0:
+                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
+                                face_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, face_buffer_start)
+                                face_buffer_count = readlong(trmbf)
 
+                                for y in range(face_buffer_count):
+                                    face_buff_offset = ftell(trmbf) + readlong(trmbf)
+                                    face_buff_ret = ftell(trmbf)
+                                    fseek(trmbf, face_buff_offset)
+                                    print(f"Facepoint {x} header: {hex(ftell(trmbf))}")
+                                    face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
+                                    face_buff_struct_len = readshort(trmbf)
+
+                                    if face_buff_struct_len != 0x0006:
+                                        raise AssertionError("Unexpected face buffer struct length!")
+                                    face_buffer_struct_section_length = readshort(trmbf)
+                                    face_buffer_struct_ptr = readshort(trmbf)
+
+                                    if face_buffer_struct_ptr != 0:
+                                        fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
+                                        facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
+                                        facepoint_byte_count = readlong(trmbf)
+                                        print(f"Facepoint {x} start: {hex(ftell(trmbf))}")
+
+                                        if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
+                                            for v in range(facepoint_byte_count // 12):
+                                                fa = readlong(trmbf)
+                                                fb = readlong(trmbf)
+                                                fc = readlong(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                        else:
+                                            for v in range(facepoint_byte_count // 6):
+                                                fa = readshort(trmbf)
+                                                fb = readshort(trmbf)
+                                                fc = readshort(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                        print(f"Facepoint {x} end: {hex(ftell(trmbf))}")
+                                    fseek(trmbf, face_buff_ret)
                             fseek(trmbf, vert_buffer_ret)
 
-    return vertices, [], faces
+                            if IN_BLENDER_ENV:
+                                new_mesh = bpy.data.meshes.new('new_mesh')
+                                new_mesh.from_pydata(vert_array, [], face_array)
+                                new_mesh.update()
+                                # make object from mesh
+                                new_object = bpy.data.objects.new('new_object', new_mesh)
+                                # add object to scene collection
+                                new_collection.objects.link(new_object)
 
 
 def readbyte(file):
@@ -802,19 +850,8 @@ def main():
     directory = "/home/kitten/プロジェクト/ProjectArceus/trmdl_0570_00_41/"
     filename = "pm0570_00_41.trmdl"
     f = open(f"{directory}{filename}", "rb")
-    vertices, edges, faces = from_trmdl(directory, f)
+    from_trmdl(directory, f)
     f.close()
-
-    new_mesh = bpy.data.meshes.new('new_mesh')
-    new_mesh.from_pydata(vertices, edges, faces)
-    new_mesh.update()
-    # make object from mesh
-    new_object = bpy.data.objects.new('new_object', new_mesh)
-    # make collection
-    new_collection = bpy.data.collections.new('new_collection')
-    bpy.context.scene.collection.children.link(new_collection)
-    # add object to scene collection
-    new_collection.objects.link(new_object)
 
 
 main()
