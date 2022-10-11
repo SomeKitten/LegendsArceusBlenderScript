@@ -13,6 +13,7 @@
 
 
 import os.path
+import random
 import struct
 
 
@@ -20,14 +21,16 @@ import bpy
 
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
-IN_BLENDER_ENV = False
+IN_BLENDER_ENV = True
 
 
 def from_trmdl(filep, trmdl):
     # make collection
     if IN_BLENDER_ENV:
-        new_collection = bpy.data.collections.new('new_collection')
+        new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
         bpy.context.scene.collection.children.link(new_collection)
+
+    materials = []
 
     trskl = None
     trmsh = None
@@ -116,8 +119,8 @@ def from_trmdl(filep, trmdl):
             trskl_name = readfixedstring(trmdl, trskl_name_len)
             print(trskl_name)
 
-            if os.path.exists(filep + trskl_name):
-                trskl = open(filep + trskl_name, "rb")
+            if os.path.exists(os.path.join(filep, trskl_name)):
+                trskl = open(os.path.join(filep, trskl_name), "rb")
             else:
                 print(f"Can't find {trskl_name}!")
 
@@ -129,14 +132,14 @@ def from_trmdl(filep, trmdl):
             trmtr_offset = ftell(trmdl) + readlong(trmdl)
             trmtr_ret = ftell(trmdl)
             fseek(trmdl, trmtr_offset)
-            trmtr_name_len = readlong(trmdl) - 6
+            trmtr_name_len = readlong(trmdl)  #  - 6 -- dunno why the extension was excluded
             trmtr_name = readfixedstring(trmdl, trmtr_name_len)
             # TODO ArceusShiny
             # LINE 1227
             print(trmtr_name)
             if x == 0:
-                if os.path.exists(filep + trmtr_name):
-                    trmtr = open(filep + trmtr_name, "rb")
+                if os.path.exists(os.path.join(filep, trmtr_name)):
+                    trmtr = open(os.path.join(filep, trmtr_name), "rb")
                 else:
                     print(f"Can't find {trmtr_name}!")
             fseek(trmdl, trmtr_ret)
@@ -258,17 +261,635 @@ def from_trmdl(filep, trmdl):
     #                 # TODO matrix math!!
     #                 # LINE 1820
 
+    if trmtr is not None:
+        print("Parsing TRMTR...")
+        trmtr_file_start = readlong(trmtr)
+        mat_data_array = []
+        fseek(trmtr, trmtr_file_start)
+        trmtr_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, trmtr_struct)
+        trmtr_struct_len = readshort(trmtr)
 
-    # TODO parse TRMTR file
-    # LINE 1867
+        if trmtr_struct_len != 0x0008:
+            raise AssertionError("Unexpected TRMTR header struct length!")
+        trmtr_struct_section_len = readshort(trmtr)
+        trmtr_struct_start = readshort(trmtr)
+        trmtr_struct_material = readshort(trmtr)
 
-    # TODO parse TRMSH file
-    # LINE 2593
+        if trmtr_struct_material != 0:
+            fseek(trmtr, trmtr_file_start + trmtr_struct_material)
+            mat_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_start)
+            mat_count = readlong(trmtr)
+            for x in range(mat_count):
+                mat_shader = "Standard"; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""
+                mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0; mat_uv_trs_v = 0
+                mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0; mat_uv_trs2_v = 0
+                mat_color1_r = 100.0; mat_color1_g = 100.0; mat_color1_b = 100.0
+                mat_color2_r = 100.0; mat_color2_g = 100.0; mat_color2_b = 100.0
+                mat_color3_r = 100.0; mat_color3_g = 100.0; mat_color3_b = 100.0
+                mat_color4_r = 100.0; mat_color4_g = 100.0; mat_color4_b = 100.0
+                mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 100.0; mat_rgh_layer2 = 100.0; mat_rgh_layer3 = 100.0; mat_rgh_layer4 = 100.0
+                mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
+                mat_offset = ftell(trmtr) + readlong(trmtr)
+                mat_ret = ftell(trmtr)
+                fseek(trmtr, mat_offset)
+                print("--------------------")
+                mat_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_struct)
+                mat_struct_len = readshort(trmtr)
+
+                if mat_struct_len != 0x0024:
+                    raise AssertionError("Unexpected material struct length!")
+                mat_struct_section_len = readshort(trmtr)
+                mat_struct_ptr_param_a = readshort(trmtr)
+                mat_struct_ptr_param_b = readshort(trmtr)
+                mat_struct_ptr_param_c = readshort(trmtr)
+                mat_struct_ptr_param_d = readshort(trmtr)
+                mat_struct_ptr_param_e = readshort(trmtr)
+                mat_struct_ptr_param_f = readshort(trmtr)
+                mat_struct_ptr_param_g = readshort(trmtr)
+                mat_struct_ptr_param_h = readshort(trmtr)
+                mat_struct_ptr_param_i = readshort(trmtr)
+                mat_struct_ptr_param_j = readshort(trmtr)
+                mat_struct_ptr_param_k = readshort(trmtr)
+                mat_struct_ptr_param_l = readshort(trmtr)
+                mat_struct_ptr_param_m = readshort(trmtr)
+                mat_struct_ptr_param_n = readshort(trmtr)
+                mat_struct_ptr_param_o = readshort(trmtr)
+                mat_struct_ptr_param_p = readshort(trmtr)
+
+                if mat_struct_ptr_param_a != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_a)
+                    mat_param_a_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_a_start)
+                    mat_name_len = readlong(trmtr)
+                    mat_name = readfixedstring(trmtr, mat_name_len)
+                    print(f"Material properties for {mat_name}:")
+                if mat_struct_ptr_param_b != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_b)
+                    mat_param_b_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_start)
+                    mat_param_b_section_count = readlong(trmtr)
+                    for z in range(mat_param_b_section_count):
+                        mat_param_b_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_b_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_b_offset)
+                        mat_param_b_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_b_struct)
+                        mat_param_b_struct_len = readshort(trmtr)
+
+                        if mat_param_b_struct_len != 0x0008:
+                            raise AssertionError("Unexpected material param b struct length!")
+                        mat_param_b_struct_section_len = readshort(trmtr)
+                        mat_param_b_struct_ptr_string = readshort(trmtr)
+                        mat_param_b_struct_ptr_params = readshort(trmtr)
+
+                        if mat_param_b_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_b_offset + mat_param_b_struct_ptr_string)
+                            mat_param_b_shader_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_shader_start)
+                            mat_param_b_shader_len = readlong(trmtr)
+                            mat_param_b_shader_string = readfixedstring(trmtr, mat_param_b_shader_len)
+                            print(f"Shader: {mat_param_b_shader_string}")
+                            if z == 1: mat_shader = mat_param_b_shader_string
+                        if mat_param_b_struct_ptr_params != 0:
+                            fseek(trmtr, mat_param_b_offset + mat_param_b_struct_ptr_params)
+                            mat_param_b_sub_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_start)
+                            mat_param_b_sub_count = readlong(trmtr)
+                            for y in range(mat_param_b_sub_count):
+                                mat_param_b_sub_offset = ftell(trmtr) + readlong(trmtr)
+                                mat_param_b_sub_ret = ftell(trmtr)
+                                fseek(trmtr, mat_param_b_sub_offset)
+                                mat_param_b_sub_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_b_sub_struct)
+                                mat_param_b_sub_struct_len = readshort(trmtr)
+
+                                if mat_param_b_sub_struct_len != 0x0008:
+                                    raise AssertionError("Unexpected material param b sub struct length!")
+                                mat_param_b_sub_struct_section_len = readshort(trmtr)
+                                mat_param_b_sub_struct_ptr_string = readshort(trmtr)
+                                mat_param_b_sub_struct_ptr_value = readshort(trmtr)
+
+                                if mat_param_b_sub_struct_ptr_string != 0:
+                                    fseek(trmtr, mat_param_b_sub_offset + mat_param_b_sub_struct_ptr_string)
+                                    mat_param_b_sub_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_string_start)
+                                    mat_param_b_sub_string_len = readlong(trmtr)
+                                    mat_param_b_sub_string = readfixedstring(trmtr, mat_param_b_sub_string_len)
+                                if mat_param_b_sub_struct_ptr_value != 0:
+                                    fseek(trmtr, mat_param_b_sub_offset + mat_param_b_sub_struct_ptr_value)
+                                    mat_param_b_sub_value_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_b_sub_value_start)
+                                    mat_param_b_sub_value_len = readlong(trmtr)
+                                    mat_param_b_sub_value = readfixedstring(trmtr, mat_param_b_sub_value_len)
+                                    print(f"{mat_param_b_sub_string}: {mat_param_b_sub_value}")
+                                fseek(trmtr, mat_param_b_sub_ret)
+                        fseek(trmtr, mat_param_b_ret)
+
+                if mat_struct_ptr_param_c != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_c)
+                    mat_param_c_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_start)
+                    mat_param_c_count = readlong(trmtr)
+
+                    for z in range(mat_param_c_count):
+                        mat_param_c_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_c_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_c_offset)
+                        mat_param_c_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_c_struct)
+                        mat_param_c_struct_len = readshort(trmtr)
+
+                        if mat_param_c_struct_len == 0x0008:
+                            mat_param_c_struct_section_len = readshort(trmtr)
+                            mat_param_c_struct_ptr_string = readshort(trmtr)
+                            mat_param_c_struct_ptr_value = readshort(trmtr)
+                            mat_param_c_struct_ptr_id = 0
+                        elif mat_param_c_struct_len == 0x000A:
+                            mat_param_c_struct_section_len = readshort(trmtr)
+                            mat_param_c_struct_ptr_string = readshort(trmtr)
+                            mat_param_c_struct_ptr_value = readshort(trmtr)
+                            mat_param_c_struct_ptr_id = readshort(trmtr)
+                        else:
+                            raise AssertionError("Unexpected material param c struct length!")
+
+                        if mat_param_c_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_string)
+                            mat_param_c_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_string_start)
+                            mat_param_c_string_len = readlong(trmtr)
+                            mat_param_c_string = readfixedstring(trmtr, mat_param_c_string_len)
+                        if mat_param_c_struct_ptr_value != 0:
+                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_value)
+                            mat_param_c_value_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_c_value_start)
+                            mat_param_c_value_len = readlong(trmtr)  # - 5 # Trimming the ".bntx" from the end.
+                            mat_param_c_value = readfixedstring(trmtr, mat_param_c_value_len)
+                        if mat_param_c_struct_ptr_id != 0:
+                            fseek(trmtr, mat_param_c_offset + mat_param_c_struct_ptr_id)
+                            mat_param_c_id = readlong(trmtr)
+                        else:
+                            mat_param_c_id = 0
+
+                        if mat_param_c_string == "BaseColorMap": mat_col0 = mat_param_c_value
+                        elif mat_param_c_string == "LayerMaskMap": mat_lym0 = mat_param_c_value
+                        elif mat_param_c_string == "NormalMap": mat_nrm0 = mat_param_c_value
+                        elif mat_param_c_string == "EmissionColorMap": mat_emi0 = mat_param_c_value
+                        elif mat_param_c_string == "RoughnessMap": mat_rgh0 = mat_param_c_value
+                        elif mat_param_c_string == "MetalicMap": mat_mtl0 = mat_param_c_value
+
+                        # -- There's also all of the following, which aren't automatically assigned to keep things simple.
+                        # -- "AOMap"
+                        # -- "AOMap1"
+                        # -- "AOMap2"
+                        # -- "BaseColorMap1"
+                        # -- "DisplacementMap"
+                        # -- "EyelidShadowMaskMap"
+                        # -- "FlowMap"
+                        # -- "FoamMaskMap"
+                        # -- "GrassCollisionMap"
+                        # -- "HighlightMaskMap"
+                        # -- "LowerEyelidColorMap"
+                        # -- "NormalMap1"
+                        # -- "NormalMap2"
+                        # -- "PackedMap"
+                        # -- "UpperEyelidColorMap"
+                        # -- "WeatherLayerMaskMap"
+                        # -- "WindMaskMap"
+
+                        print(f"{mat_param_c_string}: {mat_param_c_value} [{mat_param_c_id}]")
+                        fseek(trmtr, mat_param_c_ret)
+
+                if mat_struct_ptr_param_d != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_d)
+                    mat_param_d_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_d_start)
+                    mat_param_d_count = readlong(trmtr)
+
+                    for z in range(mat_param_d_count):
+                        mat_param_d_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_d_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_d_offset)
+                        mat_param_d_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_d_struct)
+                        mat_param_d_struct_len = readshort(trmtr)
+
+                        if mat_param_d_struct_len != 0x001E:
+                            raise AssertionError("Unexpected material param d struct length!")
+                        mat_param_d_struct_section_len = readshort(trmtr)
+                        mat_param_d_struct_ptr_a = readshort(trmtr)
+                        mat_param_d_struct_ptr_b = readshort(trmtr)
+                        mat_param_d_struct_ptr_c = readshort(trmtr)
+                        mat_param_d_struct_ptr_d = readshort(trmtr)
+                        mat_param_d_struct_ptr_e = readshort(trmtr)
+                        mat_param_d_struct_ptr_f = readshort(trmtr)
+                        mat_param_d_struct_ptr_g = readshort(trmtr)
+                        mat_param_d_struct_ptr_h = readshort(trmtr)
+                        mat_param_d_struct_ptr_i = readshort(trmtr)
+                        mat_param_d_struct_ptr_j = readshort(trmtr)
+                        mat_param_d_struct_ptr_k = readshort(trmtr)
+                        mat_param_d_struct_ptr_l = readshort(trmtr)
+                        mat_param_d_struct_ptr_m = readshort(trmtr)
+
+                        if mat_param_d_struct_ptr_a != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_a)
+                            mat_param_d_value_a = readlong(trmtr)
+                        else: mat_param_d_value_a = 0
+                        if mat_param_d_struct_ptr_b != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_b)
+                            mat_param_d_value_b = readlong(trmtr)
+                        else: mat_param_d_value_b = 0
+                        if mat_param_d_struct_ptr_c != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_c)
+                            mat_param_d_value_c = readlong(trmtr)
+                        else: mat_param_d_value_c = 0
+                        if mat_param_d_struct_ptr_d != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_d)
+                            mat_param_d_value_d = readlong(trmtr)
+                        else: mat_param_d_value_d = 0
+                        if mat_param_d_struct_ptr_e != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_e)
+                            mat_param_d_value_e = readlong(trmtr)
+                        else: mat_param_d_value_e = 0
+                        if mat_param_d_struct_ptr_f != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_f)
+                            mat_param_d_value_f = readlong(trmtr)
+                        else: mat_param_d_value_f = 0
+                        if mat_param_d_struct_ptr_g != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_g)
+                            mat_param_d_value_g = readlong(trmtr)
+                        else: mat_param_d_value_g = 0
+                        if mat_param_d_struct_ptr_h != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_h)
+                            mat_param_d_value_h = readlong(trmtr)
+                        else: mat_param_d_value_h = 0
+                        if mat_param_d_struct_ptr_i != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_i)
+                            mat_param_d_value_i = readlong(trmtr)
+                        else: mat_param_d_value_i = 0
+                        if mat_param_d_struct_ptr_j != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_j)
+                            mat_param_d_value_j = readlong(trmtr)
+                        else: mat_param_d_value_j = 0
+                        if mat_param_d_struct_ptr_k != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_k)
+                            mat_param_d_value_k = readlong(trmtr)
+                        else: mat_param_d_value_k = 0
+                        if mat_param_d_struct_ptr_l != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_l)
+                            mat_param_d_value_l = readlong(trmtr)
+                        else: mat_param_d_value_l = 0
+                        if mat_param_d_struct_ptr_m != 0:
+                            fseek(trmtr, mat_param_d_offset + mat_param_d_struct_ptr_m)
+                            mat_param_d_value_m1 = readfloat(trmtr); mat_param_d_value_m2 = readfloat(trmtr); mat_param_d_value_m3 = readfloat(trmtr)
+                        else: mat_param_d_value_m1 = 0; mat_param_d_value_m2 = 0; mat_param_d_value_m3 = 0
+
+                        print(f"Flags #{z}: {mat_param_d_value_a} | {mat_param_d_value_b} | {mat_param_d_value_c} | {mat_param_d_value_d} | {mat_param_d_value_e} | {mat_param_d_value_f} | {mat_param_d_value_g} | {mat_param_d_value_h} | {mat_param_d_value_i} | {mat_param_d_value_j} | {mat_param_d_value_k} | {mat_param_d_value_l} | {mat_param_d_value_m1} | {mat_param_d_value_m2} | {mat_param_d_value_m3}")
+                        fseek(trmtr, mat_param_d_ret)
+
+                if mat_struct_ptr_param_e != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_e)
+                    mat_param_e_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_e_start)
+                    mat_param_e_count = readlong(trmtr)
+
+                    for z in range(mat_param_e_count):
+                        mat_param_e_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_e_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_e_offset)
+                        mat_param_e_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_e_struct)
+                        mat_param_e_struct_len = readshort(trmtr)
+
+                        if mat_param_e_struct_len == 0x0006:
+                            mat_param_e_struct_section_len = readshort(trmtr)
+                            mat_param_e_struct_ptr_string = readshort(trmtr)
+                            mat_param_e_struct_ptr_value = 0
+                        elif mat_param_e_struct_len == 0x0008:
+                            mat_param_e_struct_section_len = readshort(trmtr)
+                            mat_param_e_struct_ptr_string = readshort(trmtr)
+                            mat_param_e_struct_ptr_value = readshort(trmtr)
+                        else:
+                            raise Exception(f"Unknown mat_param_e struct length!")
+
+                        if mat_param_e_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_e_offset + mat_param_e_struct_ptr_string)
+                            mat_param_e_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_e_string_start)
+                            mat_param_e_string_len = readlong(trmtr)
+                            mat_param_e_string = readfixedstring(trmtr, mat_param_e_string_len)
+
+                        if mat_param_e_struct_ptr_value != 0:
+                            fseek(trmtr, mat_param_e_offset + mat_param_e_struct_ptr_value)
+                            mat_param_e_value = readfloat(trmtr)
+                        else: mat_param_e_value = 0
+
+                        if mat_param_e_string == "Roughness": mat_rgh_layer0 = mat_param_e_value
+                        elif mat_param_e_string == "RoughnessLayer1": mat_rgh_layer1 = mat_param_e_value
+                        elif mat_param_e_string == "RoughnessLayer2": mat_rgh_layer2 = mat_param_e_value
+                        elif mat_param_e_string == "RoughnessLayer3": mat_rgh_layer3 = mat_param_e_value
+                        elif mat_param_e_string == "RoughnessLayer4": mat_rgh_layer4 = mat_param_e_value
+                        elif mat_param_e_string == "Metallic": mat_met_layer0 = mat_param_e_value
+                        elif mat_param_e_string == "MetallicLayer1": mat_met_layer1 = mat_param_e_value
+                        elif mat_param_e_string == "MetallicLayer2": mat_met_layer2 = mat_param_e_value
+                        elif mat_param_e_string == "MetallicLayer3": mat_met_layer3 = mat_param_e_value
+                        elif mat_param_e_string == "MetallicLayer4": mat_met_layer4 = mat_param_e_value
+
+                        print(f"{mat_param_e_string}: {mat_param_e_value}")
+                        fseek(trmtr, mat_param_e_ret)
+
+                if mat_struct_ptr_param_f != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_f)
+                    mat_param_f_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_f_start)
+                    mat_param_f_count = readlong(trmtr)
+
+                    for z in range(mat_param_f_count):
+                        mat_param_f_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_f_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_f_offset)
+                        mat_param_f_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_f_struct)
+                        mat_param_f_struct_len = readlong(trmtr)
+
+                        if mat_param_f_struct_len != 0x0008:
+                            raise Exception(f"Unknown mat_param_f struct length!")
+                        mat_param_f_struct_section_len = readshort(trmtr)
+                        mat_param_f_struct_ptr_string = readshort(trmtr)
+                        mat_param_f_struct_ptr_values = readshort(trmtr)
+
+                        if mat_param_f_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_f_offset + mat_param_f_struct_ptr_string)
+                            mat_param_f_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_f_string_start)
+                            mat_param_f_string_len = readlong(trmtr)
+                            mat_param_f_string = readfixedstring(trmtr, mat_param_f_string_len)
+
+                        if mat_param_f_struct_ptr_values != 0:
+                            fseek(trmtr, mat_param_f_offset + mat_param_f_struct_ptr_values)
+                            mat_param_f_value1 = readfloat(trmtr)
+                            mat_param_f_value2 = readfloat(trmtr)
+                        else: mat_param_f_value1 = mat_param_f_value2 = 0
+
+                        print(f"{mat_param_f_string}: {mat_param_f_value1}, {mat_param_f_value2}")
+                        fseek(trmtr, mat_param_f_ret)
+
+                if mat_struct_ptr_param_g != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_g)
+                    mat_param_g_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_g_start)
+                    mat_param_g_count = readlong(trmtr)
+
+                    for z in range(mat_param_g_count):
+                        mat_param_g_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_g_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_g_offset)
+                        mat_param_g_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_g_struct)
+                        mat_param_g_struct_len = readlong(trmtr)
+
+                        if mat_param_g_struct_len != 0x0008:
+                            raise Exception(f"Unknown mat_param_g struct length!")
+                        mat_param_g_struct_section_len = readshort(trmtr)
+                        mat_param_g_struct_ptr_string = readshort(trmtr)
+                        mat_param_g_struct_ptr_values = readshort(trmtr)
+
+                        if mat_param_g_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_g_offset + mat_param_g_struct_ptr_string)
+                            mat_param_g_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_g_string_start)
+                            mat_param_g_string_len = readlong(trmtr)
+                            mat_param_g_string = readfixedstring(trmtr, mat_param_g_string_len)
+
+                        if mat_param_g_struct_ptr_values != 0:
+                            fseek(trmtr, mat_param_g_offset + mat_param_g_struct_ptr_values)
+                            mat_param_g_value1 = readfloat(trmtr)
+                            mat_param_g_value2 = readfloat(trmtr)
+                            mat_param_g_value3 = readfloat(trmtr)
+                        else: mat_param_g_value1 = mat_param_g_value2 = mat_param_g_value3 = 0
+
+                        print(f"{mat_param_g_string}: {mat_param_g_value1}, {mat_param_g_value2}, {mat_param_g_value3}")
+                        fseek(trmtr, mat_param_g_ret)
+
+                if mat_struct_ptr_param_h != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_h)
+                    mat_param_h_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_h_start)
+                    mat_param_h_count = readlong(trmtr)
+
+                    for z in range(mat_param_h_count):
+                        mat_param_h_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_h_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_h_offset)
+                        mat_param_h_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_h_struct)
+                        mat_param_h_struct_len = readshort(trmtr)
+
+                        if mat_param_h_struct_len != 0x0008:
+                            raise Exception(f"Unknown mat_param_h struct length!")
+                        mat_param_h_struct_section_len = readshort(trmtr)
+                        mat_param_h_struct_ptr_string = readshort(trmtr)
+                        mat_param_h_struct_ptr_values = readshort(trmtr)
+
+                        if mat_param_h_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_h_offset + mat_param_h_struct_ptr_string)
+                            mat_param_h_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_h_string_start)
+                            mat_param_h_string_len = readlong(trmtr)
+                            mat_param_h_string = readfixedstring(trmtr, mat_param_h_string_len)
+
+                        if mat_param_h_struct_ptr_values != 0:
+                            fseek(trmtr, mat_param_h_offset + mat_param_h_struct_ptr_values)
+                            mat_param_h_value1 = readfloat(trmtr)
+                            mat_param_h_value2 = readfloat(trmtr)
+                            mat_param_h_value3 = readfloat(trmtr)
+                            mat_param_h_value4 = readfloat(trmtr)
+                        else: mat_param_h_value1 = mat_param_h_value2 = mat_param_h_value3 = mat_param_h_value4 = 0
+
+                        if mat_param_h_string == "UVScaleOffset": mat_uv_scale_u = mat_param_h_value1; mat_uv_scale_v = mat_param_h_value2; mat_uv_trs_u = mat_param_h_value3; mat_uv_trs_v = mat_param_h_value4
+                        elif mat_param_h_string == "UVScaleOffset1": mat_uv_scale2_u = mat_param_h_value1; mat_uv_scale2_v = mat_param_h_value2; mat_uv_trs2_u = mat_param_h_value3; mat_uv_trs2_v = mat_param_h_value4
+                        elif mat_param_h_string == "BaseColorLayer1": mat_color1_r = mat_param_h_value1; mat_color1_g = mat_param_h_value2; mat_color1_b = mat_param_h_value3
+                        elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
+                        elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
+                        elif mat_param_h_string == "BaseColorLayer4": mat_color4_r = mat_param_h_value1; mat_color4_g = mat_param_h_value2; mat_color4_b = mat_param_h_value3
+
+                        print(f"{mat_param_h_string}: {mat_param_h_value1}, {mat_param_h_value2}, {mat_param_h_value3}, {mat_param_h_value4}")
+                        fseek(trmtr, mat_param_h_ret)
+
+                if mat_struct_ptr_param_i != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_i)
+                    mat_param_i_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_i_start)
+                    mat_param_i_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_i_struct)
+                    mat_param_i_struct_len = readlong(trmtr)
+
+                    if mat_param_i_struct_len != 0x0000:
+                        raise Exception(f"Unknown mat_param_i struct length!")
+
+                if mat_struct_ptr_param_j != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_j)
+                    mat_param_j_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_j_start)
+                    mat_param_j_count = readlong(trmtr)
+
+                    for y in range(mat_param_j_count):
+                        mat_param_j_offset = ftell(trmtr) + readlong(trmtr)
+                        mat_param_j_ret = ftell(trmtr)
+                        fseek(trmtr, mat_param_j_offset)
+                        mat_param_j_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_j_struct)
+                        mat_param_j_struct_len = readshort(trmtr)
+
+                        if mat_param_j_struct_len == 0x0006:
+                            mat_param_j_struct_section_len = readshort(trmtr)
+                            mat_param_j_struct_ptr_string = readshort(trmtr)
+                            mat_param_j_struct_ptr_value = 0
+                        elif mat_param_j_struct_len == 0x0008:
+                            mat_param_j_struct_section_len = readshort(trmtr)
+                            mat_param_j_struct_ptr_string = readshort(trmtr)
+                            mat_param_j_struct_ptr_value = readshort(trmtr)
+                        else:
+                            raise Exception(f"Unknown mat_param_j struct length!")
+
+                        if mat_param_j_struct_ptr_string != 0:
+                            fseek(trmtr, mat_param_j_offset + mat_param_j_struct_ptr_string)
+                            mat_param_j_string_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_j_string_start)
+                            mat_param_j_string_len = readlong(trmtr)
+                            mat_param_j_string = readfixedstring(trmtr, mat_param_j_string_len)
+
+                        if mat_param_j_struct_ptr_value != 0:
+                            fseek(trmtr, mat_param_j_offset + mat_param_j_struct_ptr_value)
+                            mat_param_j_value = readlong(trmtr)
+                        else: mat_param_j_value = "0" # why is this a string?
+
+                        print(f"{mat_param_j_string}: {mat_param_j_value}")
+                        fseek(trmtr, mat_param_j_ret)
+
+                if mat_struct_ptr_param_k != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_k)
+                    mat_param_k_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_k_start)
+                    mat_param_k_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_k_struct)
+                    mat_param_k_struct_len = readlong(trmtr)
+
+                    if mat_param_k_struct_len != 0x0000:
+                        raise Exception(f"Unexpected mat_param_k struct length!")
+
+                if mat_struct_ptr_param_l != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_l)
+                    mat_param_l_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_l_start)
+                    mat_param_l_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_l_struct)
+                    mat_param_l_struct_len = readlong(trmtr)
+
+                    if mat_param_l_struct_len != 0x0000:
+                        raise Exception(f"Unexpected mat_param_l struct length!")
+
+                if mat_struct_ptr_param_m != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_m)
+                    mat_param_m_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_m_start)
+                    mat_param_m_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_m_struct)
+                    mat_param_m_struct_len = readlong(trmtr)
+
+                    if mat_param_m_struct_len != 0x0000:
+                        raise Exception(f"Unexpected mat_param_m struct length!")
+
+                if mat_struct_ptr_param_n != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_n)
+                    mat_param_n_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_n_start)
+                    mat_param_n_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_n_struct)
+                    mat_param_n_struct_len = readshort(trmtr)
+
+                    if mat_param_n_struct_len == 0x0004:
+                        mat_param_n_struct_section_len = readshort(trmtr)
+                        mat_param_n_struct_unk = 0
+                    elif mat_param_n_struct_len == 0x0006:
+                        mat_param_n_struct_section_len = readshort(trmtr)
+                        mat_param_n_struct_unk = readshort(trmtr)
+                    else:
+                        raise Exception(f"Unexpected mat_param_n struct length!")
+
+                    if mat_param_n_struct_unk != 0:
+                        fseek(trmtr, mat_param_n_start + mat_param_n_struct_unk)
+                        mat_param_n_value =  readbyte(trmtr)
+                        print(f"Unknown value A = {mat_param_n_value}")
+
+                if mat_struct_ptr_param_o != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_o)
+                    mat_param_o_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_o_start)
+                    mat_param_o_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_param_o_struct)
+                    mat_param_o_struct_len = readshort(trmtr)
+
+                    if mat_param_o_struct_len == 0x0004:
+                        mat_param_o_struct_section_len = readshort(trmtr)
+                        mat_param_o_struct_unk = 0
+                        mat_param_o_struct_value = 0
+                    elif mat_param_o_struct_len == 0x0008:
+                        mat_param_o_struct_section_len = readshort(trmtr)
+                        mat_param_o_struct_unk = readshort(trmtr)
+                        mat_param_o_struct_value = readshort(trmtr)
+                    else:
+                        raise Exception(f"Unexpected mat_param_o struct length!")
+
+                    if mat_param_o_struct_unk != 0:
+                        fseek(trmtr, mat_param_o_start + mat_param_o_struct_unk)
+                        mat_param_o_value =  readbyte(trmtr)
+                        print(f"Unknown value B = {mat_param_o_value}")
+
+                if mat_struct_ptr_param_p != 0:
+                    fseek(trmtr, mat_offset + mat_struct_ptr_param_p)
+                    mat_param_p_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_param_p_start)
+                    mat_param_p_string_len = readlong(trmtr)
+                    mat_param_p_string = readfixedstring(trmtr, mat_param_p_string_len)
+                    print(mat_param_p_string)
+
+                mat_data_array.append({"mat_name": mat_name, "mat_shader": mat_shader, "mat_col0": mat_col0, "mat_lym0": mat_lym0, "mat_nrm0": mat_nrm0, "mat_emi0": mat_emi0, "mat_rgh0": mat_rgh0, "mat_mtl0": mat_mtl0, "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b, "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b, "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b, "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b, "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4, "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4})
+                fseek(trmtr, mat_ret)
+            print("--------------------")
+
+        fclose(trmtr)
+
+        if IN_BLENDER_ENV:
+            # process materials
+            for m, mat in enumerate(mat_data_array):
+                material = bpy.data.materials.new(name=mat["mat_name"])
+                material.use_nodes = True
+                materials.append(material)
+
+                material_output = material.node_tree.nodes.get("Material Output")
+                principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
+
+                image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
+
+                color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
+                color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
+                color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
+                color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+
+                print(color1, color2, color3, color4)
+
+                color_inp1 = material.node_tree.nodes.new("ShaderNodeRGB")
+                color_inp1.outputs[0].default_value = color1
+                color_inp2 = material.node_tree.nodes.new("ShaderNodeRGB")
+                color_inp2.outputs[0].default_value = color2
+                color_inp3 = material.node_tree.nodes.new("ShaderNodeRGB")
+                color_inp3.outputs[0].default_value = color3
+                color_inp4 = material.node_tree.nodes.new("ShaderNodeRGB")
+                color_inp4.outputs[0].default_value = color4
+
+                transparent_bsdf = material.node_tree.nodes.new("ShaderNodeBsdfTransparent")
+
+                mix_shader1 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_shader2 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_shader3 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_shader4 = material.node_tree.nodes.new("ShaderNodeMixShader")
+
+                separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+
+                material.node_tree.links.new(image_texture.outputs[0], separate_color.inputs[0])
+
+                material.node_tree.links.new(separate_color.outputs[0], mix_shader1.inputs[0])
+                material.node_tree.links.new(separate_color.outputs[1], mix_shader2.inputs[0])
+                material.node_tree.links.new(separate_color.outputs[2], mix_shader3.inputs[0])
+                material.node_tree.links.new(image_texture.outputs[1], mix_shader4.inputs[0])
+
+                material.node_tree.links.new(color_inp1.outputs[0], mix_shader1.inputs[2])
+                material.node_tree.links.new(color_inp2.outputs[0], mix_shader2.inputs[2])
+                material.node_tree.links.new(color_inp3.outputs[0], mix_shader3.inputs[2])
+                material.node_tree.links.new(color_inp4.outputs[0], mix_shader4.inputs[2])
+
+                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader1.inputs[1])
+                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader2.inputs[1])
+                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader3.inputs[1])
+                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader4.inputs[1])
+
+                mix_shader_final1 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_shader_final2 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_shader_final3 = material.node_tree.nodes.new("ShaderNodeMixShader")
+
+                material.node_tree.links.new(mix_shader1.outputs[0], mix_shader_final1.inputs[1])
+                material.node_tree.links.new(mix_shader2.outputs[0], mix_shader_final1.inputs[2])
+                material.node_tree.links.new(mix_shader3.outputs[0], mix_shader_final2.inputs[1])
+                material.node_tree.links.new(mix_shader4.outputs[0], mix_shader_final2.inputs[2])
+
+                material.node_tree.links.new(mix_shader_final1.outputs[0], mix_shader_final3.inputs[1])
+                material.node_tree.links.new(mix_shader_final2.outputs[0], mix_shader_final3.inputs[2])
+
+                material.node_tree.links.new(mix_shader_final3.outputs[0], material_output.inputs[0])
 
     for w in range(trmsh_count):
-        if os.path.exists(filep + trmsh_lods_array[w]):
+        if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
             poly_group_array = []
-            trmsh = open(filep + trmsh_lods_array[w], "rb")
+            trmsh = open(os.path.join(filep, trmsh_lods_array[w]), "rb")
             trmsh_file_start = readlong(trmsh)
             print("Parsing TRMSH...")
             fseek(trmsh, trmsh_file_start)
@@ -291,8 +912,8 @@ def from_trmdl(filep, trmdl):
                 print(trmbf_filename)
 
                 trmbf = None
-                if os.path.exists(filep + trmbf_filename):
-                    trmbf = open(filep + trmbf_filename, "rb")
+                if os.path.exists(os.path.join(filep, trmbf_filename)):
+                    trmbf = open(os.path.join(filep, trmbf_filename), "rb")
                 else:
                     raise AssertionError(f"Can't find {trmbf_filename}!")
 
@@ -363,9 +984,62 @@ def from_trmdl(filep, trmdl):
                             poly_group_struct_ptr_vis_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
-                                # TODO mat_list
-                                # LINE 2693
-                                pass
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_mat_list)
+                                mat_offset = ftell(trmsh) + readlong(trmsh)
+                                fseek(trmsh, mat_offset)
+                                mat_count = readlong(trmsh)
+                                for y in range(mat_count):
+                                    mat_entry_offset = ftell(trmsh) + readlong(trmsh)
+                                    mat_ret = ftell(trmsh)
+                                    fseek(trmsh, mat_entry_offset)
+                                    mat_struct = ftell(trmsh) - readlong(trmsh)
+                                    fseek(trmsh, mat_struct)
+                                    mat_struct_len = readshort(trmsh)
+
+                                    if mat_struct_len != 0x000E:
+                                        raise AssertionError("Unexpected material struct length!")
+                                    mat_struct_section_len = readshort(trmsh)
+                                    mat_struct_ptr_facepoint_count = readshort(trmsh)
+                                    mat_struct_ptr_facepoint_start = readshort(trmsh)
+                                    mat_struct_ptr_unk_c = readshort(trmsh)
+                                    mat_struct_ptr_string = readshort(trmsh)
+                                    mat_struct_ptr_unk_d = readshort(trmsh)
+
+                                    if mat_struct_ptr_facepoint_count != 0:
+                                        fseek(trmsh, mat_entry_offset + mat_struct_ptr_facepoint_count)
+                                        mat_facepoint_count = readlong(trmsh) / 3
+
+                                    if mat_struct_ptr_facepoint_start != 0:
+                                        fseek(trmsh, mat_entry_offset + mat_struct_ptr_facepoint_start)
+                                        mat_facepoint_start = readlong(trmsh) / 3
+                                    else: mat_facepoint_start = 0
+
+                                    if mat_struct_ptr_unk_c != 0:
+                                        fseek(trmsh, mat_entry_offset + mat_struct_ptr_unk_c)
+                                        mat_unk_c = readlong(trmsh)
+
+                                    if mat_struct_ptr_string != 0:
+                                        fseek(trmsh, mat_entry_offset + mat_struct_ptr_string)
+                                        mat_name_offset = ftell(trmsh) + readlong(trmsh)
+                                        fseek(trmsh, mat_name_offset)
+                                        mat_name_len = readlong(trmsh)
+                                        mat_name = readfixedstring(trmsh, mat_name_len)
+
+                                    if mat_struct_ptr_unk_d != 0:
+                                        fseek(trmsh, mat_entry_offset + mat_struct_ptr_unk_d)
+                                        mat_unk_d = readlong(trmsh)
+
+                                    mat_id = 1
+                                    for z in range(len(mat_data_array)):
+                                        if mat_data_array[z]["mat_name"] == mat_name:
+                                            mat_id = z
+                                            break
+
+                                    for z in range(int(mat_facepoint_count)):
+                                        face_mat_id_array.append(mat_id)
+
+                                    print(f"Material {mat_name}: FaceCount = {mat_facepoint_count}, FaceStart = {mat_facepoint_start}")
+                                    fseek(trmsh, mat_ret)
 
                             if poly_group_struct_ptr_poly_group_name != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_poly_group_name)
@@ -607,7 +1281,6 @@ def from_trmdl(filep, trmdl):
                                         vert_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, vert_buffer_start)
                                         vert_buffer_byte_count = readlong(trmbf)
                                         print(f"Vertex buffer {x} start: {hex(ftell(trmbf))}")
-                                        print(poly_group_array[x])
 
                                         for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
                                             if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
@@ -675,6 +1348,7 @@ def from_trmdl(filep, trmdl):
                                             elif poly_group_array[x]["uvs2_fmt"] == "2Floats":
                                                 tu2 = readfloat(trmbf)
                                                 tv2 = readfloat(trmbf)
+                                                uv2_array.append((tu2, tv2))
                                             else:
                                                 raise AssertionError("Unknown uvs2 type!")
 
@@ -683,6 +1357,7 @@ def from_trmdl(filep, trmdl):
                                             elif poly_group_array[x]["uvs3_fmt"] == "2Floats":
                                                 tu3 = readfloat(trmbf)
                                                 tv3 = readfloat(trmbf)
+                                                uv3_array.append((tu3, tv3))
                                             else:
                                                 raise AssertionError("Unknown uvs3 type!")
 
@@ -691,6 +1366,7 @@ def from_trmdl(filep, trmdl):
                                             elif poly_group_array[x]["uvs4_fmt"] == "2Floats":
                                                 tu4 = readfloat(trmbf)
                                                 tv4 = readfloat(trmbf)
+                                                uv4_array.append((tu4, tv4))
                                             else:
                                                 raise AssertionError("Unknown uvs4 type!")
 
@@ -744,14 +1420,13 @@ def from_trmdl(filep, trmdl):
                                             else:
                                                 raise AssertionError("Unknown weights type!")
 
-                                            # vert_array.append((vx, vz, vy))  # ! Y and Z are swapped
                                             vert_array.append([vx, vz, vy])  # ! Y and Z are swapped
-                                            # norm_array.append((nx, ny, nz))
-                                            # # TODO vert_colors
-                                            # # LINE 3157
-                                            # uv_array.append((tu, tv, 0))
-                                            # w1_array.append({weight1: weight1, weight2: weight2, weight3: weight3, weight4: weight4})
-                                            # b1_array.append({bone1: bone1, bone2: bone2, bone3: bone3, bone4: bone4})
+                                            normal_array.append((nx, ny, nz))
+                                            # color_array.append((colorr, colorg, colorb))
+                                            # alpha_array.append(colora)
+                                            uv_array.append((tu, tv))
+                                            # w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
+                                            # b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
                                             print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
@@ -795,12 +1470,64 @@ def from_trmdl(filep, trmdl):
                                     fseek(trmbf, face_buff_ret)
                             fseek(trmbf, vert_buffer_ret)
 
+                            print("Making object...")
+
                             if IN_BLENDER_ENV:
-                                new_mesh = bpy.data.meshes.new('new_mesh')
+                                # LINE 3257
+                                new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
+                                # print(f"face: {face_array[1]}")
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
                                 # make object from mesh
-                                new_object = bpy.data.objects.new('new_object', new_mesh)
+                                new_object = bpy.data.objects.new(poly_group_name, new_mesh)
+
+                                # # vertex colours
+                                # color_layer = new_object.data.vertex_colors.new()
+                                # new_object.data.vertex_colors.active = color_layer
+                                #
+                                # print(f"color_array: {len(color_array)}")
+                                # print(f"polygons: {len(new_object.data.polygons)}")
+                                #
+                                # for i, poly in enumerate(new_object.data.polygons):
+                                #     print(f"poly: {i}")
+                                #     for v, vert in enumerate(poly.vertices):
+                                #         loop_index = poly.loop_indices[v]
+                                #
+                                #         # print(f"loop_index: {loop_index}")
+                                #         # print(f"vert: {vert}")
+                                #
+                                #         color_layer.data[loop_index].color = (color_array[vert][0] / 255, color_array[vert][1] / 255, color_array[vert][2] / 255, 1)
+
+                                for mat in materials:
+                                    new_object.data.materials.append(mat)
+
+                                # materials
+                                # print(f"polygon: {[int(v) for v in new_object.data.polygons[1].vertices]}")
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    # print(f"poly: {i}")
+                                    poly.material_index = face_mat_id_array[i]
+
+                                # uvs
+                                uv_layers = new_object.data.uv_layers
+                                uv_layer = uv_layers.new(name="UVMap")
+                                if len(uv2_array) > 0:
+                                    uv2_layer = uv_layers.new(name="UV2Map")
+                                if len(uv3_array) > 0:
+                                    uv3_layer = uv_layers.new(name="UV3Map")
+                                if len(uv4_array) > 0:
+                                    uv4_layer = uv_layers.new(name="UV4Map")
+                                uv_layers.active = uv_layer
+
+                                for face in new_object.data.polygons:
+                                    for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                                        uv_layer.data[loop_idx].uv = uv_array[vert_idx]
+                                        if len(uv2_array) > 0:
+                                            uv2_layer.data[loop_idx].uv = uv2_array[vert_idx]
+                                        if len(uv3_array) > 0:
+                                            uv3_layer.data[loop_idx].uv = uv3_array[vert_idx]
+                                        if len(uv4_array) > 0:
+                                            uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
+
                                 # add object to scene collection
                                 new_collection.objects.link(new_object)
 
@@ -828,8 +1555,10 @@ def readhalffloat(file):
     return struct.unpack('<e', file.read(2))[0]
 
 
-def readfixedstring (file, length):
-    return file.read(length).decode('utf-8')
+def readfixedstring(file, length):
+    bytes_data = file.read(length)
+    # print(f"readfixedstring ({length}): {bytes_data}")
+    return bytes_data.decode('utf-8')
 
 
 def fseek(file, offset):
@@ -847,9 +1576,9 @@ def fclose(file):
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "/home/kitten/プロジェクト/ProjectArceus/trmdl_0570_00_41/"
+    directory = "/home/kitten/VirtualBox Shared/Arceus/romfs/bin/archive/pokemon/pm0570_00_41/bin/pokemon/pm0570/pm0570_00_41/mdl"
     filename = "pm0570_00_41.trmdl"
-    f = open(f"{directory}{filename}", "rb")
+    f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
 
