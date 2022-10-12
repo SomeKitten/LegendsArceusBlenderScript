@@ -825,11 +825,14 @@ def from_trmdl(filep, trmdl):
                 material.use_nodes = True
                 materials.append(material)
 
+                blend_type = "ADD"
+
                 material_output = material.node_tree.nodes.get("Material Output")
                 principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
 
                 image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                 image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
+                image_texture.image.colorspace_settings.name = "Non-Color"
 
                 color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
                 color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
@@ -869,12 +872,18 @@ def from_trmdl(filep, trmdl):
                 color_inp4 = material.node_tree.nodes.new("ShaderNodeRGB")
                 color_inp4.outputs[0].default_value = color4
 
-                transparent_bsdf = material.node_tree.nodes.new("ShaderNodeBsdfTransparent")
-
-                mix_shader1 = material.node_tree.nodes.new("ShaderNodeMixShader")
-                mix_shader2 = material.node_tree.nodes.new("ShaderNodeMixShader")
-                mix_shader3 = material.node_tree.nodes.new("ShaderNodeMixShader")
-                mix_shader4 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color1.blend_type = blend_type
+                mix_color1.inputs[1].default_value = (0, 0, 0, 0)
+                mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color2.blend_type = blend_type
+                mix_color2.inputs[1].default_value = (0, 0, 0, 0)
+                mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color3.blend_type = blend_type
+                mix_color3.inputs[1].default_value = (0, 0, 0, 0)
+                mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color4.blend_type = blend_type
+                mix_color4.inputs[1].default_value = (0, 0, 0, 0)
 
                 separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
 
@@ -890,34 +899,34 @@ def from_trmdl(filep, trmdl):
 
                 material.node_tree.links.new(image_texture.outputs[0], separate_color.inputs[0])
 
-                material.node_tree.links.new(separate_color.outputs[0], mix_shader1.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[1], mix_shader2.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[2], mix_shader3.inputs[0])
-                material.node_tree.links.new(image_texture.outputs[1], mix_shader4.inputs[0])
+                material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
+                material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
+                material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
+                material.node_tree.links.new(image_texture.outputs[1],  mix_color4.inputs[0])
 
-                material.node_tree.links.new(color_inp1.outputs[0], mix_shader1.inputs[2])
-                material.node_tree.links.new(color_inp2.outputs[0], mix_shader2.inputs[2])
-                material.node_tree.links.new(color_inp3.outputs[0], mix_shader3.inputs[2])
-                material.node_tree.links.new(color_inp4.outputs[0], mix_shader4.inputs[2])
+                material.node_tree.links.new(color_inp1.outputs[0], mix_color1.inputs[2])
+                material.node_tree.links.new(color_inp2.outputs[0], mix_color2.inputs[2])
+                material.node_tree.links.new(color_inp3.outputs[0], mix_color3.inputs[2])
+                material.node_tree.links.new(color_inp4.outputs[0], mix_color4.inputs[2])
 
-                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader1.inputs[1])
-                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader2.inputs[1])
-                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader3.inputs[1])
-                material.node_tree.links.new(transparent_bsdf.outputs[0], mix_shader4.inputs[1])
+                mix_color_final1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color_final1.blend_type = blend_type
+                mix_color_final2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color_final2.blend_type = blend_type
+                mix_color_final3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                mix_color_final3.blend_type = blend_type
 
-                mix_shader_final1 = material.node_tree.nodes.new("ShaderNodeMixShader")
-                mix_shader_final2 = material.node_tree.nodes.new("ShaderNodeMixShader")
-                mix_shader_final3 = material.node_tree.nodes.new("ShaderNodeMixShader")
+                material.node_tree.links.new(mix_color1.outputs[0], mix_color_final1.inputs[1])
+                material.node_tree.links.new(mix_color2.outputs[0], mix_color_final1.inputs[2])
+                material.node_tree.links.new(mix_color3.outputs[0], mix_color_final2.inputs[1])
+                material.node_tree.links.new(mix_color4.outputs[0], mix_color_final2.inputs[2])
 
-                material.node_tree.links.new(mix_shader1.outputs[0], mix_shader_final1.inputs[1])
-                material.node_tree.links.new(mix_shader2.outputs[0], mix_shader_final1.inputs[2])
-                material.node_tree.links.new(mix_shader3.outputs[0], mix_shader_final2.inputs[1])
-                material.node_tree.links.new(mix_shader4.outputs[0], mix_shader_final2.inputs[2])
+                material.node_tree.links.new(mix_color_final1.outputs[0], mix_color_final3.inputs[1])
+                material.node_tree.links.new(mix_color_final2.outputs[0], mix_color_final3.inputs[2])
 
-                material.node_tree.links.new(mix_shader_final1.outputs[0], mix_shader_final3.inputs[1])
-                material.node_tree.links.new(mix_shader_final2.outputs[0], mix_shader_final3.inputs[2])
+                material.node_tree.links.new(mix_color_final3.outputs[0], principled_bsdf.inputs[0])
 
-                material.node_tree.links.new(mix_shader_final3.outputs[0], material_output.inputs[0])
+                material.node_tree.links.new(principled_bsdf.outputs[0], material_output.inputs[0])
 
     for w in range(trmsh_count):
         if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
@@ -1454,8 +1463,8 @@ def from_trmdl(filep, trmdl):
                                             else:
                                                 raise AssertionError("Unknown weights type!")
 
-                                            vert_array.append([vx, vz, vy])  # ! Y and Z are swapped
-                                            normal_array.append((nx, ny, nz))
+                                            vert_array.append((-vx, vz, vy))  # ! Y and Z are swapped, and X is negated
+                                            normal_array.append((-nx, nz, ny))  # ! Y and Z are swapped, and X is negated
                                             # color_array.append((colorr, colorg, colorb))
                                             # alpha_array.append(colora)
                                             uv_array.append((tu, tv))
@@ -1560,6 +1569,9 @@ def from_trmdl(filep, trmdl):
                                         if len(uv4_array) > 0:
                                             uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
 
+                                #normals
+                                new_object.data.normals_split_custom_set_from_vertices(normal_array)
+
                                 # add object to scene collection
                                 new_collection.objects.link(new_object)
 
@@ -1608,8 +1620,8 @@ def fclose(file):
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "/home/kitten/VirtualBox Shared/Arceus/romfs/bin/archive/pokemon/pm0570_00_41/bin/pokemon/pm0570/pm0570_00_41/mdl"
-    filename = "pm0570_00_41.trmdl"
+    directory = "/home/kitten/VirtualBox Shared/Arceus/romfs/bin/archive/pokemon/pm0134_00_00_mdl"
+    filename = "pm0134_00_00.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
