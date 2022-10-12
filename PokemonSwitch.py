@@ -39,7 +39,7 @@ def from_trmdl(filep, trmdl):
     trmsh_lods_array = []
     bone_array = []
     bone_rig_array = []
-    trskl_bone_adjust = 1
+    trskl_bone_adjust = 0
     CharaCheck = "None"
 
     print("Parsing TRMDL...")
@@ -283,11 +283,11 @@ def from_trmdl(filep, trmdl):
                 mat_shader = "Standard"; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""
                 mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0; mat_uv_trs_v = 0
                 mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0; mat_uv_trs2_v = 0
-                mat_color1_r = 100.0; mat_color1_g = 100.0; mat_color1_b = 100.0
-                mat_color2_r = 100.0; mat_color2_g = 100.0; mat_color2_b = 100.0
-                mat_color3_r = 100.0; mat_color3_g = 100.0; mat_color3_b = 100.0
-                mat_color4_r = 100.0; mat_color4_g = 100.0; mat_color4_b = 100.0
-                mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 100.0; mat_rgh_layer2 = 100.0; mat_rgh_layer3 = 100.0; mat_rgh_layer4 = 100.0
+                mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
+                mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
+                mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
+                mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
+                mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
                 mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
                 mat_offset = ftell(trmtr) + readlong(trmtr)
                 mat_ret = ftell(trmtr)
@@ -685,6 +685,7 @@ def from_trmdl(filep, trmdl):
                         elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer4": mat_color4_r = mat_param_h_value1; mat_color4_g = mat_param_h_value2; mat_color4_b = mat_param_h_value3
+                        else: print(f"Unknown mat_param_h: {mat_param_h_string}")
 
                         print(f"{mat_param_h_string}: {mat_param_h_value1}, {mat_param_h_value2}, {mat_param_h_value3}, {mat_param_h_value4}")
                         fseek(trmtr, mat_param_h_ret)
@@ -811,7 +812,7 @@ def from_trmdl(filep, trmdl):
                     mat_param_p_string = readfixedstring(trmtr, mat_param_p_string_len)
                     print(mat_param_p_string)
 
-                mat_data_array.append({"mat_name": mat_name, "mat_shader": mat_shader, "mat_col0": mat_col0, "mat_lym0": mat_lym0, "mat_nrm0": mat_nrm0, "mat_emi0": mat_emi0, "mat_rgh0": mat_rgh0, "mat_mtl0": mat_mtl0, "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b, "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b, "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b, "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b, "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4, "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4})
+                mat_data_array.append({"mat_name": mat_name, "mat_shader": mat_shader, "mat_col0": mat_col0, "mat_lym0": mat_lym0, "mat_nrm0": mat_nrm0, "mat_emi0": mat_emi0, "mat_rgh0": mat_rgh0, "mat_mtl0": mat_mtl0, "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b, "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b, "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b, "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b, "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4, "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4, "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v, "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v})
                 fseek(trmtr, mat_ret)
             print("--------------------")
 
@@ -835,7 +836,29 @@ def from_trmdl(filep, trmdl):
                 color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
                 color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
 
-                print(color1, color2, color3, color4)
+                print(f'Material {mat["mat_name"]}:')
+                print(f"Color 1: {color1}")
+                print(f"Color 2: {color2}")
+                print(f"Color 3: {color3}")
+                print(f"Color 4: {color4}")
+                print("---")
+
+                uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
+                separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
+
+                math_multiply = material.node_tree.nodes.new("ShaderNodeMath")
+                math_multiply.operation = "MULTIPLY"
+                math_multiply.inputs[1].default_value = mat["mat_uv_scale_u"]
+
+                math_multiply2 = material.node_tree.nodes.new("ShaderNodeMath")
+                math_multiply2.operation = "MULTIPLY"
+                math_multiply2.inputs[1].default_value = mat["mat_uv_scale_v"]
+
+                math_ping_pong = material.node_tree.nodes.new("ShaderNodeMath")
+                math_ping_pong.operation = "PINGPONG"
+                math_ping_pong.inputs[1].default_value = 1.0
+
+                combine_xyz = material.node_tree.nodes.new("ShaderNodeCombineXYZ")
 
                 color_inp1 = material.node_tree.nodes.new("ShaderNodeRGB")
                 color_inp1.outputs[0].default_value = color1
@@ -854,6 +877,16 @@ def from_trmdl(filep, trmdl):
                 mix_shader4 = material.node_tree.nodes.new("ShaderNodeMixShader")
 
                 separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+
+                material.node_tree.links.new(uv_map.outputs[0], separate_xyz.inputs[0])
+                material.node_tree.links.new(separate_xyz.outputs[0], math_multiply.inputs[0])
+                material.node_tree.links.new(math_multiply.outputs[0], math_ping_pong.inputs[0])
+                material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
+
+                material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
+                material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
+
+                material.node_tree.links.new(combine_xyz.outputs[0], image_texture.inputs[0])
 
                 material.node_tree.links.new(image_texture.outputs[0], separate_color.inputs[0])
 
@@ -953,7 +986,7 @@ def from_trmdl(filep, trmdl):
                             b1_array = []
                             w1_array = []
                             weight_array = []
-                            poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 1
+                            poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
                             colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"
@@ -1007,11 +1040,11 @@ def from_trmdl(filep, trmdl):
 
                                     if mat_struct_ptr_facepoint_count != 0:
                                         fseek(trmsh, mat_entry_offset + mat_struct_ptr_facepoint_count)
-                                        mat_facepoint_count = readlong(trmsh) / 3
+                                        mat_facepoint_count = int(readlong(trmsh) / 3)
 
                                     if mat_struct_ptr_facepoint_start != 0:
                                         fseek(trmsh, mat_entry_offset + mat_struct_ptr_facepoint_start)
-                                        mat_facepoint_start = readlong(trmsh) / 3
+                                        mat_facepoint_start = int(readlong(trmsh) / 3)
                                     else: mat_facepoint_start = 0
 
                                     if mat_struct_ptr_unk_c != 0:
@@ -1029,13 +1062,13 @@ def from_trmdl(filep, trmdl):
                                         fseek(trmsh, mat_entry_offset + mat_struct_ptr_unk_d)
                                         mat_unk_d = readlong(trmsh)
 
-                                    mat_id = 1
+                                    mat_id = 0
                                     for z in range(len(mat_data_array)):
                                         if mat_data_array[z]["mat_name"] == mat_name:
                                             mat_id = z
                                             break
 
-                                    for z in range(int(mat_facepoint_count)):
+                                    for z in range(mat_facepoint_count):
                                         face_mat_id_array.append(mat_id)
 
                                     print(f"Material {mat_name}: FaceCount = {mat_facepoint_count}, FaceStart = {mat_facepoint_start}")
@@ -1336,7 +1369,8 @@ def from_trmdl(filep, trmdl):
                                                 raise AssertionError("Unknown bitangents type!")
 
                                             if poly_group_array[x]["uvs_fmt"] == "None":
-                                                pass
+                                                tu = 0
+                                                tv = 0
                                             elif poly_group_array[x]["uvs_fmt"] == "2Floats":
                                                 tu = readfloat(trmbf)
                                                 tv = readfloat(trmbf)
@@ -1428,7 +1462,7 @@ def from_trmdl(filep, trmdl):
                                             # w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
                                             # b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
-                                            print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                            # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
                             if vert_buffer_struct_ptr_faces != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
@@ -1502,9 +1536,7 @@ def from_trmdl(filep, trmdl):
                                     new_object.data.materials.append(mat)
 
                                 # materials
-                                # print(f"polygon: {[int(v) for v in new_object.data.polygons[1].vertices]}")
                                 for i, poly in enumerate(new_object.data.polygons):
-                                    # print(f"poly: {i}")
                                     poly.material_index = face_mat_id_array[i]
 
                                 # uvs
