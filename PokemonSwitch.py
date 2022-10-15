@@ -18,7 +18,8 @@ import struct
 
 
 import bpy
-
+import mathutils
+import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
@@ -31,6 +32,7 @@ def from_trmdl(filep, trmdl):
         bpy.context.scene.collection.children.link(new_collection)
 
     materials = []
+    bone_structure = None
 
     trskl = None
     trmsh = None
@@ -38,6 +40,7 @@ def from_trmdl(filep, trmdl):
 
     trmsh_lods_array = []
     bone_array = []
+    bone_id_map = {}
     bone_rig_array = []
     trskl_bone_adjust = 0
     CharaCheck = "None"
@@ -148,118 +151,153 @@ def from_trmdl(filep, trmdl):
     # TODO create bone_rig_array
     # LINE 1247
 
-    # if trskl is not None:
-    #     print("Parsing TRSKL...")
-    #     trskl_file_start = readlong(trskl)
-    #     fseek(trskl, trskl_file_start)
-    #     trskl_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_struct)
-    #     trskl_struct_len = readshort(trskl)
-    #     if trskl_struct_len == 0x000C:
-    #         trskl_struct_section_len = readshort(trskl)
-    #         trskl_struct_start = readshort(trskl)
-    #         trskl_struct_bone = readshort(trskl)
-    #         trskl_struct_b = readshort(trskl)
-    #         trskl_struct_c = readshort(trskl)
-    #         trskl_struct_bone_adjust = 0
-    #     elif trskl_struct_len == 0x000E:
-    #         trskl_struct_section_len = readshort(trskl)
-    #         trskl_struct_start = readshort(trskl)
-    #         trskl_struct_bone = readshort(trskl)
-    #         trskl_struct_b = readshort(trskl)
-    #         trskl_struct_c = readshort(trskl)
-    #         trskl_struct_bone_adjust = readshort(trskl)
-    #     else:
-    #         raise AssertionError("Unexpected TRSKL header struct length!")
-    #
-    #     if trskl_struct_bone_adjust != 0:
-    #         fseek(trskl, trskl_file_start + trskl_struct_bone_adjust)
-    #         trskl_bone_adjust = readlong(trskl) + 1; print(f"Mesh node IDs start at {trskl_bone_adjust}")
-    #
-    #     if trskl_struct_bone != 0:
-    #         fseek(trskl, trskl_file_start + trskl_struct_bone)
-    #         trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
-    #         bone_count = readlong(trskl)
-    #
-    #         for i in range(bone_count):
-    #             x = i + 1
-    #             bone_offset = ftell(trskl) + readlong(trskl)
-    #             bone_ret = ftell(trskl)
-    #             fseek(trskl, bone_offset)
-    #             print(f"Bone {x} start: {hex(bone_offset)}")
-    #             trskl_bone_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_bone_struct)
-    #             trskl_bone_struct_len = readshort(trskl)
-    #
-    #             if trskl_bone_struct_len == 0x0012:
-    #                 trskl_bone_struct_ptr_section_len = readshort(trskl)
-    #                 trskl_bone_struct_ptr_string = readshort(trskl)
-    #                 trskl_bone_struct_ptr_bone = readshort(trskl)
-    #                 trskl_bone_struct_ptr_c = readshort(trskl)
-    #                 trskl_bone_struct_ptr_d = readshort(trskl)
-    #                 trskl_bone_struct_ptr_parent = readshort(trskl)
-    #                 trskl_bone_struct_ptr_rig_id = readshort(trskl)
-    #                 trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-    #                 trskl_bone_struct_ptr_h = 0
-    #             elif trskl_bone_struct_len == 0x0014:
-    #                 trskl_bone_struct_ptr_section_len = readshort(trskl)
-    #                 trskl_bone_struct_ptr_string = readshort(trskl)
-    #                 trskl_bone_struct_ptr_bone = readshort(trskl)
-    #                 trskl_bone_struct_ptr_c = readshort(trskl)
-    #                 trskl_bone_struct_ptr_d = readshort(trskl)
-    #                 trskl_bone_struct_ptr_parent = readshort(trskl)
-    #                 trskl_bone_struct_ptr_rig_id = readshort(trskl)
-    #                 trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-    #                 trskl_bone_struct_ptr_h = readshort(trskl)
-    #             else:
-    #                 raise AssertionError("Unexpected TRSKL bone struct length!")
-    #
-    #             if trskl_bone_struct_ptr_bone_merge != 0:
-    #                 fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
-    #                 bone_merge_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_merge_start)
-    #                 bone_merge_string_len = readlong(trskl)
-    #                 if bone_merge_string_len != 0:
-    #                     bone_merge_string = readfixedstring(trskl, bone_merge_string_len)
-    #                     print(f"BoneMerge to {bone_merge_string}")
-    #                 else: bone_merge_string = ""
-    #
-    #             if trskl_bone_struct_ptr_bone != 0:
-    #                 fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
-    #                 bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
-    #                 bone_pos_struct = ftell(trskl) - readlong(trskl); fseek(trskl, bone_pos_struct)
-    #                 bone_pos_struct_len = readshort(trskl)
-    #
-    #                 if bone_pos_struct_len != 0x000A:
-    #                     raise AssertionError("Unexpected bone position struct length!")
-    #
-    #                 bone_pos_struct_section_len = readshort(trskl)
-    #                 bone_pos_struct_ptr_scl = readshort(trskl)
-    #                 bone_pos_struct_ptr_rot = readshort(trskl)
-    #                 bone_pos_struct_ptr_trs = readshort(trskl)
-    #
-    #                 fseek(trskl, bone_pos_start + bone_pos_struct_ptr_trs)
-    #                 bone_tx = readfloat(trskl); bone_ty = readfloat(trskl); bone_tz = readfloat(trskl)
-    #                 # TODO ArceusScale
-    #                 # LINE 1797
-    #                 fseek(trskl, bone_pos_start + bone_pos_struct_ptr_rot)
-    #                 bone_rx = readfloat(trskl); bone_ry = readfloat(trskl); bone_rz = readfloat(trskl); bone_rw = readfloat(trskl)
-    #                 fseek(trskl, bone_pos_start + bone_pos_struct_ptr_scl)
-    #                 bone_sx = readfloat(trskl); bone_sy = readfloat(trskl); bone_sz = readfloat(trskl)
-    #
-    #                 if trskl_bone_struct_ptr_string != 0:
-    #                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_string)
-    #                     bone_string_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_string_start)
-    #                     bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
-    #                 if trskl_bone_struct_ptr_parent != 0x00:
-    #                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-    #                     bone_parent = readlong(trskl) + 1
-    #                 else:
-    #                     bone_parent = 0
-    #                 if trskl_bone_struct_ptr_rig_id != 0:
-    #                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
-    #                     bone_rig_id = readlong(trskl) + trskl_bone_adjust
-    #                     bone_rig_array[bone_rig_id] = bone_name
-    #
-    #                 # TODO matrix math!!
-    #                 # LINE 1820
+    if trskl is not None:
+        print("Parsing TRSKL...")
+        trskl_file_start = readlong(trskl)
+        fseek(trskl, trskl_file_start)
+        trskl_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_struct)
+        trskl_struct_len = readshort(trskl)
+        if trskl_struct_len == 0x000C:
+            trskl_struct_section_len = readshort(trskl)
+            trskl_struct_start = readshort(trskl)
+            trskl_struct_bone = readshort(trskl)
+            trskl_struct_b = readshort(trskl)
+            trskl_struct_c = readshort(trskl)
+            trskl_struct_bone_adjust = 0
+        elif trskl_struct_len == 0x000E:
+            trskl_struct_section_len = readshort(trskl)
+            trskl_struct_start = readshort(trskl)
+            trskl_struct_bone = readshort(trskl)
+            trskl_struct_b = readshort(trskl)
+            trskl_struct_c = readshort(trskl)
+            trskl_struct_bone_adjust = readshort(trskl)
+        else:
+            raise AssertionError("Unexpected TRSKL header struct length!")
+
+        if trskl_struct_bone_adjust != 0:
+            fseek(trskl, trskl_file_start + trskl_struct_bone_adjust)
+            trskl_bone_adjust = readlong(trskl); print(f"Mesh node IDs start at {trskl_bone_adjust}")
+
+        if trskl_struct_bone != 0:
+            fseek(trskl, trskl_file_start + trskl_struct_bone)
+            trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
+            bone_count = readlong(trskl)
+
+            new_armature = bpy.data.armatures.new("Armature")
+            bone_structure = bpy.data.objects.new("Armature", new_armature)
+            new_collection.objects.link(bone_structure)
+            bpy.context.view_layer.objects.active = bone_structure
+            bpy.ops.object.editmode_toggle()
+
+            for x in range(bone_count):
+                bone_offset = ftell(trskl) + readlong(trskl)
+                bone_ret = ftell(trskl)
+                fseek(trskl, bone_offset)
+                print(f"Bone {x} start: {hex(bone_offset)}")
+                trskl_bone_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_bone_struct)
+                trskl_bone_struct_len = readshort(trskl)
+
+                if trskl_bone_struct_len == 0x0012:
+                    trskl_bone_struct_ptr_section_len = readshort(trskl)
+                    trskl_bone_struct_ptr_string = readshort(trskl)
+                    trskl_bone_struct_ptr_bone = readshort(trskl)
+                    trskl_bone_struct_ptr_c = readshort(trskl)
+                    trskl_bone_struct_ptr_d = readshort(trskl)
+                    trskl_bone_struct_ptr_parent = readshort(trskl)
+                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
+                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
+                    trskl_bone_struct_ptr_h = 0
+                elif trskl_bone_struct_len == 0x0014:
+                    trskl_bone_struct_ptr_section_len = readshort(trskl)
+                    trskl_bone_struct_ptr_string = readshort(trskl)
+                    trskl_bone_struct_ptr_bone = readshort(trskl)
+                    trskl_bone_struct_ptr_c = readshort(trskl)
+                    trskl_bone_struct_ptr_d = readshort(trskl)
+                    trskl_bone_struct_ptr_parent = readshort(trskl)
+                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
+                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
+                    trskl_bone_struct_ptr_h = readshort(trskl)
+                else:
+                    raise AssertionError("Unexpected TRSKL bone struct length!")
+
+                if trskl_bone_struct_ptr_bone_merge != 0:
+                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
+                    bone_merge_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_merge_start)
+                    bone_merge_string_len = readlong(trskl)
+                    if bone_merge_string_len != 0:
+                        bone_merge_string = readfixedstring(trskl, bone_merge_string_len)
+                        print(f"BoneMerge to {bone_merge_string}")
+                    else: bone_merge_string = ""
+
+                if trskl_bone_struct_ptr_bone != 0:
+                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
+                    bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
+                    bone_pos_struct = ftell(trskl) - readlong(trskl); fseek(trskl, bone_pos_struct)
+                    bone_pos_struct_len = readshort(trskl)
+
+                    if bone_pos_struct_len != 0x000A:
+                        raise AssertionError("Unexpected bone position struct length!")
+
+                    bone_pos_struct_section_len = readshort(trskl)
+                    bone_pos_struct_ptr_scl = readshort(trskl)
+                    bone_pos_struct_ptr_rot = readshort(trskl)
+                    bone_pos_struct_ptr_trs = readshort(trskl)
+
+                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_trs)
+                    bone_tx = readfloat(trskl); bone_ty = readfloat(trskl); bone_tz = readfloat(trskl)
+                    # TODO ArceusScale
+                    # LINE 1797
+                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_rot)
+                    bone_rx = readfloat(trskl); bone_ry = readfloat(trskl); bone_rz = readfloat(trskl)
+                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_scl)
+                    bone_sx = readfloat(trskl); bone_sy = readfloat(trskl); bone_sz = readfloat(trskl)
+
+                    if trskl_bone_struct_ptr_string != 0:
+                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_string)
+                        bone_string_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_string_start)
+                        bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
+                    if trskl_bone_struct_ptr_parent != 0x00:
+                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
+                        bone_parent = readlong(trskl)
+                    else:
+                        bone_parent = 0
+                    if trskl_bone_struct_ptr_rig_id != 0:
+                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
+                        bone_rig_id = readlong(trskl) + trskl_bone_adjust
+
+                        while len(bone_rig_array) <= bone_rig_id:
+                            bone_rig_array.append("")
+                        bone_rig_array[bone_rig_id] = bone_name
+
+                    bone_matrix = mathutils.Matrix.LocRotScale(
+                        (bone_tx, bone_ty, bone_tz),
+                        mathutils.Euler((bone_rx, bone_ry, bone_rz)),
+                        (bone_sx, bone_sy, bone_sz))
+
+                    new_bone = new_armature.edit_bones.new(bone_name)
+
+                    new_bone.use_connect = False
+                    new_bone.use_inherit_rotation = True
+                    new_bone.use_inherit_scale = True
+                    new_bone.use_local_location = True
+
+                    new_bone.head = (0, 0, 0)
+                    new_bone.tail = (0, 0, 0.01)
+                    new_bone.matrix = bone_matrix
+
+                    if bone_parent != 0:
+                        new_bone.parent = bone_array[bone_parent]
+                        new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
+
+                    if bone_name in bone_rig_array:
+                        bone_id_map[bone_rig_array.index(bone_name)] = bone_name
+                    else:
+                        print(f"Bone {bone_name} not found in bone rig array!")
+                    bone_array.append(new_bone)
+
+                fseek(trskl, bone_ret)
+
+    fclose(trskl)
 
     if trmtr is not None:
         print("Parsing TRMTR...")
@@ -993,6 +1031,8 @@ def from_trmdl(filep, trmdl):
                     math_add3 = material.node_tree.nodes.new("ShaderNodeMath")
                     math_add3.operation = "ADD"
 
+                    material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0])
+
                     material.node_tree.links.new(separate_color.outputs[0], math_add1.inputs[0])
                     material.node_tree.links.new(separate_color.outputs[1], math_add1.inputs[1])
                     material.node_tree.links.new(separate_color.outputs[2], math_add2.inputs[0])
@@ -1029,6 +1069,8 @@ def from_trmdl(filep, trmdl):
                     vector_scale.operation = "SCALE"
                     vector_scale.inputs[3].default_value = -1.0
 
+                    material.node_tree.links.new(combine_xyz.outputs[0], nrm_image_texture.inputs[0])
+
                     material.node_tree.links.new(nrm_image_texture.outputs[0], normal_map.inputs[1])
                     material.node_tree.links.new(normal_map.outputs[0], vector_scale.inputs[0])
                     material.node_tree.links.new(vector_scale.outputs[0], principled_bsdf.inputs[22])
@@ -1037,6 +1079,8 @@ def from_trmdl(filep, trmdl):
                     rgh_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     rgh_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
                     rgh_image_texture.image.colorspace_settings.name = "Non-Color"
+
+                    material.node_tree.links.new(combine_xyz.outputs[0], rgh_image_texture.inputs[0])
 
                     material.node_tree.links.new(rgh_image_texture.outputs[0], principled_bsdf.inputs[9])
 
@@ -1240,8 +1284,7 @@ def from_trmdl(filep, trmdl):
                                     vert_buff_param_offset = ftell(trmsh) + readlong(trmsh)
                                     fseek(trmsh, vert_buff_param_offset)
                                     vert_buff_param_count = readlong(trmsh)
-                                    for k in range(vert_buff_param_count):
-                                        y = k + 1
+                                    for y in range(vert_buff_param_count):
                                         vert_buff_param_offset = ftell(trmsh) + readlong(trmsh)
                                         vert_buff_param_ret = ftell(trmsh)
                                         fseek(trmsh, vert_buff_param_offset)
@@ -1585,13 +1628,13 @@ def from_trmdl(filep, trmdl):
                                             else:
                                                 raise AssertionError("Unknown weights type!")
 
-                                            vert_array.append((-vx, vz, vy))  # ! Y and Z are swapped, and X is negated
-                                            normal_array.append((-nx, nz, ny))  # ! Y and Z are swapped, and X is negated
+                                            vert_array.append((vx, vy, vz))  # ! Y and Z are swapped, and X is negated
+                                            normal_array.append((nx, ny, nz))  # ! Y and Z are swapped, and X is negated
                                             # color_array.append((colorr, colorg, colorb))
                                             # alpha_array.append(colora)
                                             uv_array.append((tu, tv))
-                                            # w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
-                                            # b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
+                                            w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
+                                            b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
                                             # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
@@ -1637,14 +1680,58 @@ def from_trmdl(filep, trmdl):
 
                             print("Making object...")
 
+                            for b in range(len(w1_array)):
+                                w = {"boneids": [], "weights": []}
+                                maxweight = w1_array[b]["weight1"] +\
+                                            w1_array[b]["weight2"] +\
+                                            w1_array[b]["weight3"] +\
+                                            w1_array[b]["weight4"]
+
+                                if maxweight > 0:
+                                    if (w1_array[b]["weight1"] > 0):
+                                        w["boneids"].append(b1_array[b]["bone1"])
+                                        w["weights"].append(w1_array[b]["weight1"])
+                                    if (w1_array[b]["weight2"] > 0):
+                                        w["boneids"].append(b1_array[b]["bone2"])
+                                        w["weights"].append(w1_array[b]["weight2"])
+                                    if (w1_array[b]["weight3"] > 0):
+                                        w["boneids"].append(b1_array[b]["bone3"])
+                                        w["weights"].append(w1_array[b]["weight3"])
+                                    if (w1_array[b]["weight4"] > 0):
+                                        w["boneids"].append(b1_array[b]["bone4"])
+                                        w["weights"].append(w1_array[b]["weight4"])
+
+                                weight_array.append(w)
+
                             if IN_BLENDER_ENV:
                                 # LINE 3257
+
                                 new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
-                                # print(f"face: {face_array[1]}")
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
-                                # make object from mesh
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
+
+                                if bone_structure != None:
+                                    new_object.parent = bone_structure
+                                    new_object.modifiers.new(name='Skeleton', type='ARMATURE')
+                                    new_object.modifiers['Skeleton'].object = bone_structure
+
+                                    for face in new_object.data.polygons:
+                                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                                            w = weight_array[vert_idx]
+
+                                            for i in range(len(w["boneids"])):
+                                                bone_id = bone_id_map[w['boneids'][i]]
+                                                weight = w['weights'][i]
+
+                                                group = None
+                                                if new_object.vertex_groups.get(bone_id) == None:
+                                                    print(f"Creating vertex group {bone_id}")
+                                                    group = new_object.vertex_groups.new(name=bone_id)
+                                                else:
+                                                    group = new_object.vertex_groups[bone_id]
+
+                                                group.add([vert_idx], weight, 'REPLACE')
 
                                 # # vertex colours
                                 # color_layer = new_object.data.vertex_colors.new()
@@ -1742,8 +1829,8 @@ def fclose(file):
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "/home/kitten/VirtualBox Shared/Arceus/romfs/bin/archive/pokemon/pm0077_00_00"
-    filename = "pm0077_00_00.trmdl"
+    directory = "/home/kitten/VirtualBox Shared/Arceus/romfs/bin/archive/pokemon/pm0570_00_41"
+    filename = "pm0570_00_41.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
