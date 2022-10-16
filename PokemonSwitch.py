@@ -15,7 +15,7 @@
 import os.path
 import random
 import struct
-
+from pathlib import Path
 
 import bpy
 import mathutils
@@ -23,8 +23,17 @@ import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
+rare = False
 
-
+def main():
+    # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
+    directory = "E:/models/pm0570_00_41"
+    filename = "pm0570_00_41.trmdl"
+    f = open(os.path.join(directory, filename), "rb")
+    from_trmdl(directory, f)
+    f.close()
+    
+    
 def from_trmdl(filep, trmdl):
     # make collection
     if IN_BLENDER_ENV:
@@ -37,7 +46,7 @@ def from_trmdl(filep, trmdl):
     trskl = None
     trmsh = None
     trmtr = None
-
+    
     trmsh_lods_array = []
     bone_array = []
     bone_id_map = {}
@@ -143,10 +152,10 @@ def from_trmdl(filep, trmdl):
             # LINE 1227
             print(trmtr_name)
             if x == 0:
-                if os.path.exists(os.path.join(filep, trmtr_name)):
-                    trmtr = open(os.path.join(filep, trmtr_name), "rb")
+                if rare == True:
+                    trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
                 else:
-                    print(f"Can't find {trmtr_name}!")
+                    trmtr = open(os.path.join(filep, trmtr_name), "rb") 
             fseek(trmdl, trmtr_ret)
     fclose(trmdl)
 
@@ -1846,14 +1855,6 @@ def ftell(file):
 def fclose(file):
     file.close()
 
-
-def main():
-    # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "E:/models/pm0570_00_41"
-    filename = "pm0570_00_41.trmdl"
-    f = open(os.path.join(directory, filename), "rb")
-    from_trmdl(directory, f)
-    f.close()
 
 
 main()
