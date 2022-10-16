@@ -1726,6 +1726,7 @@ def from_trmdl(filep, trmdl):
                                 # LINE 3257
 
                                 new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
+                                new_mesh.use_auto_smooth = True
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
@@ -1798,7 +1799,7 @@ def from_trmdl(filep, trmdl):
                                             uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
 
                                 # #normals
-                                # new_object.data.normals_split_custom_set_from_vertices(normal_array)
+                                new_object.data.normals_split_custom_set_from_vertices(normal_array)
 
                                 # add object to scene collection
                                 new_collection.objects.link(new_object)
@@ -1848,8 +1849,8 @@ def fclose(file):
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "E:/models/pm0487_12_00"
-    filename = "pm0487_12_00.trmdl"
+    directory = "E:/models/pm0570_00_41"
+    filename = "pm0570_00_41.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
