@@ -27,8 +27,8 @@ rare = False
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "D:/Escritorio/pokemon/pm1006_12_41"
-    filename = "pm1006_12_41.trmdl"
+    directory = "D:/Escritorio/pokemon/pm0047_00_00"
+    filename = "pm0047_00_00.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
@@ -293,7 +293,7 @@ def from_trmdl(filep, trmdl):
                     new_bone.use_local_location = True
 
                     new_bone.head = (0, 0, 0)
-                    new_bone.tail = (0, 0, 0.01)
+                    new_bone.tail = (0, 0, 0.1)
                     new_bone.matrix = bone_matrix
 
                     if bone_parent != 0:
