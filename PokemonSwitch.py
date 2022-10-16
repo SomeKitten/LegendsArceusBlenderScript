@@ -27,8 +27,8 @@ rare = False
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "E:/models/pm0570_00_41"
-    filename = "pm0570_00_41.trmdl"
+    directory = "D:/Escritorio/pokemon/pm1006_12_41"
+    filename = "pm1006_12_41.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
@@ -983,7 +983,7 @@ def from_trmdl(filep, trmdl):
      
                     mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                     mix_color1.blend_type = blend_type
-                    mix_color1.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color1.inputs[1].default_value = (1, 1, 1, 1)
                     mix_color1.inputs[2].default_value = color1
                     mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                     mix_color2.blend_type = blend_type
