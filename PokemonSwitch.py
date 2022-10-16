@@ -1047,7 +1047,6 @@ def from_trmdl(filep, trmdl):
                         metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
                         metalness_image_texture.image.colorspace_settings.name = "Non-Color"
                         material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
-                        material.node_tree.links.new(combine_xyz.outputs[0], metalness_image_texture.inputs[0])
                         
                     if mat["mat_enable_roughness_map"]:
                         roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
