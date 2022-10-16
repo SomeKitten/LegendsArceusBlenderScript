@@ -87,18 +87,20 @@ def from_trmdl(filep, trmdl):
                 trmsh_name_len = readlong(trmdl)
                 chara_check = readfixedstring(trmdl, 3); fseek(trmdl, ftell(trmdl) - 3)
 
-                if chara_check == "au_": chara_check = "CommonNPC"
-                elif chara_check == "bu_": chara_check = "CommonNPC"
-                elif chara_check == "cf_": chara_check = "CommonNPC"
-                elif chara_check == "cm_": chara_check = "CommonNPC"
-                elif chara_check == "df_": chara_check = "CommonNPC"
-                elif chara_check == "dm_": chara_check = "CommonNPC"
-                elif chara_check == "p1_": chara_check = "Rei"
-                elif chara_check == "p2_": chara_check = "Akari"
+                if chara_check.startswith(('au_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('bu_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('cf_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('cm_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('df_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('dm_')): chara_check = "CommonNPC"
+                elif chara_check.startswith(('p1_')): chara_check = "Rei"
+                elif chara_check.startswith(('p2_')): chara_check = "Akari"
+                elif chara_check.startswith(('pm')): chara_check = "Pokemon"
                 else: chara_check = "None"
 
                 trmsh_name = readfixedstring(trmdl, trmsh_name_len)
                 print(trmsh_name)
+                print(chara_check)
                 trmsh_lods_array.append(trmsh_name)
             fseek(trmdl, trmsh_ret)
 
@@ -431,7 +433,7 @@ def from_trmdl(filep, trmdl):
                                 if mat_param_b_sub_string == "EnableMetallicMap": mat_enable_metallic_map = mat_param_b_sub_value == "True"
                                 if mat_param_b_sub_string == "EnableDisplacementMap": mat_enable_displacement_map = mat_param_b_sub_value == "True"
                                 if mat_param_b_sub_string == "EnableHighlight": mat_enable_highlight_map = mat_param_b_sub_value == "True"
-
+                                if mat_param_b_sub_string == "EnableOverrideColor": mat_enable_override_color = mat_param_b_sub_value == "True"
                                 fseek(trmtr, mat_param_b_sub_ret)
                         fseek(trmtr, mat_param_b_ret)
 
@@ -925,152 +927,196 @@ def from_trmdl(filep, trmdl):
                 color_output = principled_bsdf.inputs[0]
                 if mat["mat_shader"] == "Unlit":
                     color_output = material_output.inputs[0]
-
-                # LAYER MASK MAP
-                lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
-                lym_image_texture.image.colorspace_settings.name = "Non-Color"
-				huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                huesaturationvalue.inputs[2].default_value = 2.0
-				huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                huesaturationvalue2.inputs[2].default_value = 2.0
-
-                color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
-                color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
-                color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
-                color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
-
-                print(f'Material {mat["mat_name"]}:')
-                print(f"Color 1: {color1}")
-                print(f"Color 2: {color2}")
-                print(f"Color 3: {color3}")
-                print(f"Color 4: {color4}")
-                print("---")
-
+                
                 uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
                 separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
-
+    
                 math_multiply1 = material.node_tree.nodes.new("ShaderNodeMath")
                 math_multiply1.operation = "MULTIPLY"
                 math_multiply1.inputs[1].default_value = mat["mat_uv_scale_u"]
-
+    
                 math_multiply2 = material.node_tree.nodes.new("ShaderNodeMath")
                 math_multiply2.operation = "MULTIPLY"
                 math_multiply2.inputs[1].default_value = mat["mat_uv_scale_v"]
-
+    
                 math_ping_pong = material.node_tree.nodes.new("ShaderNodeMath")
                 math_ping_pong.operation = "PINGPONG"
                 math_ping_pong.inputs[1].default_value = 1.0
-
+    
                 combine_xyz = material.node_tree.nodes.new("ShaderNodeCombineXYZ")
-
-                mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color1.blend_type = blend_type
-                mix_color1.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color1.inputs[2].default_value = color1
-                mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color2.blend_type = blend_type
-                mix_color2.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color2.inputs[2].default_value = color2
-                mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color3.blend_type = blend_type
-                mix_color3.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color3.inputs[2].default_value = color3
-                mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color4.blend_type = blend_type
-                mix_color4.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color4.inputs[2].default_value = color4
-                mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color5.blend_type = blend_type
-                mix_color5.inputs[0].default_value = 0.0
-                mix_color5.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color5.inputs[2].default_value = (1, 1, 1, 1)
                 
-                material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
-                material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
-                material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                material.node_tree.links.new(mix_color4.outputs[0], color_output)
-                
-                separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
-                material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
-                material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
-                material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
                 material.node_tree.links.new(uv_map.outputs[0], separate_xyz.inputs[0])
                 material.node_tree.links.new(separate_xyz.outputs[0], math_multiply1.inputs[0])
                 material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
                 material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
-
-                material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
-                material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
-                material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
-                
-                if mat["mat_enable_base_color_map"]:
+                    
+                if chara_check == "Pokemon":
+                    # LAYER MASK MAP
+                    lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
+                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                    huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
+                    huesaturationvalue.inputs[2].default_value = 2.0
+                    huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
+                    huesaturationvalue2.inputs[2].default_value = 2.0
+    
+                    color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
+                    color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
+                    color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
+                    color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+    
+                    print(f'Material {mat["mat_name"]}:')
+                    print(f"Color 1: {color1}")
+                    print(f"Color 2: {color2}")
+                    print(f"Color 3: {color3}")
+                    print(f"Color 4: {color4}")
+                    print("---")
+     
+                    mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color1.blend_type = blend_type
+                    mix_color1.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color1.inputs[2].default_value = color1
+                    mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color2.blend_type = blend_type
+                    mix_color2.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color2.inputs[2].default_value = color2
+                    mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color3.blend_type = blend_type
+                    mix_color3.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color3.inputs[2].default_value = color3
+                    mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color4.blend_type = blend_type
+                    mix_color4.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color4.inputs[2].default_value = color4
+                    mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color5.blend_type = blend_type
+                    mix_color5.inputs[0].default_value = 0.0
+                    mix_color5.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color5.inputs[2].default_value = (1, 1, 1, 1)
+                    
+                    material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
+                    material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
+                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
+                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
+                    material.node_tree.links.new(mix_color4.outputs[0], color_output)
+                    
+                    separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                    material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
+                    material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
+                    material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
+                    material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
+    
+                    material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
+                    material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
+                    material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
+                    
+                    if mat["mat_enable_base_color_map"]:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
+                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
+                        material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
+                        
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
+                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
+                        material.node_tree.links.new(combine_xyz.outputs[0], highlight_image_texture.inputs[0])
+                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
+                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
+                        material.node_tree.links.new(highlight_image_texture.outputs[0], principled_bsdf.inputs[19])
+                        
+                    if mat["mat_enable_normal_map"]:
+                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
+                        normal_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(combine_xyz.outputs[0], normal_image_texture.inputs[0])
+                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
+                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
+                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                        
+                    if mat["mat_enable_metallic_map"]:
+                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
+                        metalness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
+                        material.node_tree.links.new(combine_xyz.outputs[0], metalness_image_texture.inputs[0])
+                        
+                    if mat["mat_enable_roughness_map"]:
+                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
+                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
+                        material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
+                        
+                    if mat["mat_enable_ao_map"]:
+                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
+                        ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                        mix_color6.blend_type = "MULTIPLY"
+                        mix_color6.inputs[0].default_value = 1.0
+                        material.node_tree.links.new(combine_xyz.outputs[0], ambientocclusion_image_texture.inputs[0]) 
+                        if mix_color5 == True:
+                            material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
+                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
+                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                        else:
+                            material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
+                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
+                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                else:  
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
-                    material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
-                    material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
-                    
-                if mat["mat_enable_highlight_map"]:
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
-                    highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
-                    material.node_tree.links.new(combine_xyz.outputs[0], highlight_image_texture.inputs[0])
-                    material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
-                    material.node_tree.links.new(mix_color5.outputs[0], color_output)
-                    material.node_tree.links.new(highlight_image_texture.outputs[0], principled_bsdf.inputs[19])
-                    
-                if mat["mat_enable_normal_map"]:
-                    normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
-                    normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(combine_xyz.outputs[0], normal_image_texture.inputs[0])
-                    separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                    combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                    normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
-                    material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
-                    material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
-                    material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
-                    material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
-                    
-                if mat["mat_enable_metallic_map"]:
-                    metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
-                    metalness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
-                    material.node_tree.links.new(combine_xyz.outputs[0], metalness_image_texture.inputs[0])
-                    
-                if mat["mat_enable_roughness_map"]:
-                    roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
-                    roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
-                    material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
-                    
-                if mat["mat_enable_ao_map"]:
-                    ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
-                    ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
-                    mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color6.blend_type = "MULTIPLY"
-                    mix_color6.inputs[0].default_value = 1.0
-                    material.node_tree.links.new(combine_xyz.outputs[0], ambientocclusion_image_texture.inputs[0]) 
-                    if mix_color5 == True:
-                        material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
-                        material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
-                        material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                    else:
-                        material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
+                    material.node_tree.links.new(alb_image_texture.outputs[0], color_output)                    
+                        
+                       
+                    if mat["mat_enable_normal_map"]:
+                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
+                        normal_image_texture.image.colorspace_settings.name = "Non-Color"
+                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
+                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
+                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                        
+                    if mat["mat_enable_metallic_map"]:
+                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
+                        metalness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
+                        
+                    if mat["mat_enable_roughness_map"]:
+                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
+                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])  
+                        
+                    if mat["mat_enable_ao_map"]:
+                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
+                        ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                        mix_color6.blend_type = "MULTIPLY"
+                        mix_color6.inputs[0].default_value = 1.0
+                        material.node_tree.links.new(alb_image_texture.outputs[0], mix_color6.inputs[1])
                         material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
-                        material.node_tree.links.new(mix_color6.outputs[0], color_output)                    
-                    
+                        material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                        
     for w in range(trmsh_count):
         if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
             poly_group_array = []
@@ -1806,8 +1852,8 @@ def fclose(file):
 
 def main():
     # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "E:/models/pm0196_00_00"
-    filename = "pm0196_00_00.trmdl"
+    directory = "E:/models/pm0487_12_00"
+    filename = "pm0487_12_00.trmdl"
     f = open(os.path.join(directory, filename), "rb")
     from_trmdl(directory, f)
     f.close()
