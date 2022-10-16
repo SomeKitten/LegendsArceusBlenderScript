@@ -1024,7 +1024,6 @@ def from_trmdl(filep, trmdl):
                         highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
                         highlight_image_texture.image.colorspace_settings.name = "Non-Color"
                         material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
-                        material.node_tree.links.new(combine_xyz.outputs[0], highlight_image_texture.inputs[0])
                         material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
                         material.node_tree.links.new(mix_color5.outputs[0], color_output)
                         material.node_tree.links.new(highlight_image_texture.outputs[0], principled_bsdf.inputs[19])
@@ -1033,7 +1032,6 @@ def from_trmdl(filep, trmdl):
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
                         normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(combine_xyz.outputs[0], normal_image_texture.inputs[0])
                         separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
                         combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
                         normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
@@ -1065,7 +1063,6 @@ def from_trmdl(filep, trmdl):
                         mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                         mix_color6.blend_type = "MULTIPLY"
                         mix_color6.inputs[0].default_value = 1.0
-                        material.node_tree.links.new(combine_xyz.outputs[0], ambientocclusion_image_texture.inputs[0]) 
                         if mix_color5 == True:
                             material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
