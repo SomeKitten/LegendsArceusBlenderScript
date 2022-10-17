@@ -10,7 +10,8 @@ That way, it's easier to compare the two and see what's different.
 
 #Model Dump
 Download the models from here, they're prepared already for load them with pngs so you dont have to export or re-export anything
-https://drive.google.com/file/d/1dITgyrvozPXmH0WOnFfFvMB1DRC5Idqs/view?usp=sharing
 
+Pokémon: https://drive.google.com/file/d/1dITgyrvozPXmH0WOnFfFvMB1DRC5Idqs/view?usp=sharing
+Trainers: https://drive.google.com/file/d/1yyMBpUxzEFzJsSVf07hZdje7ubTrYPzG/view?usp=sharing
 
 Blender script made/ported by @SomeKitten 
