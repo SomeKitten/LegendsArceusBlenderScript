@@ -1,4 +1,4 @@
-# Legends Arceus Blender Script
+# Legends Arceus Blender Script 3.3.x
 A Python script for Blender to import models from Pokemon Legends: Arceus (VERY WIP)
 
 HUGE thanks to Random Talking Bush for making the original maxscript for this
