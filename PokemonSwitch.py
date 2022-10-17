@@ -1,38 +1,63 @@
-# HUGE thanks to Random Talking Bush for making the original maxscript for this
-# https://www.vg-resource.com/thread-29836.html
-
-# The formatting of this script is a bit wonky, but that's because I wanted to make it
-# look as close to the original maxscript as possible.
-# That way, it's easier to compare the two and see what's different.
-
-# ***I have marked places where you need to change variables with "READ THIS:"***
-
-# READ THIS: paste this into blender and run, make sure you change the path to this file's name
-# filename = "/home/kitten/PycharmProjects/Arceus/PokemonSwitch.py"
-# exec(compile(open(filename).read(), filename, 'exec'))
+bl_info = {
+    "name": "Legends Arceus Importer (.TRMDL)",
+    "author": "Scarlett/SomeKitten & ElChicoEevee",
+    "version": (0, 0, 2),
+    "blender": (3, 3, 0),
+    "location": "File > Import-Export",
+    "description": "A tool designed to import LMD files from the mobile game Pokemon Masters",
+    "warning": "",
+    "category": "Import-Export",
+}
 
 
 import os.path
 import random
 import struct
 from pathlib import Path
-
+from bpy.props import (BoolProperty,
+                       FloatProperty,
+                       StringProperty,
+                       EnumProperty,
+                       CollectionProperty
+                       )
+from bpy_extras.io_utils import ImportHelper
 import bpy
 import mathutils
 import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
-rare = False
 
-def main():
-    # READ THIS: change this directory and filename to the directory of the model's files and the .trmdl file's name
-    directory = "D:/Escritorio/pokemon/pm0047_00_00"
-    filename = "pm0047_00_00.trmdl"
-    f = open(os.path.join(directory, filename), "rb")
-    from_trmdl(directory, f)
-    f.close()
     
+class PokeArcImport(bpy.types.Operator, ImportHelper):
+    bl_idname = "custom_import_scene.pokemonlegendsarceus"
+    bl_label = "Import"
+    bl_options = {'PRESET', 'UNDO'}
+    filename_ext = ".trmdl"
+    filter_glob = StringProperty(
+            default="*.trmdl",
+            options={'HIDDEN'},
+            )
+    filepath = bpy.props.StringProperty(subtype='FILE_PATH',)
+    files = CollectionProperty(type=bpy.types.PropertyGroup)
+    rare: BoolProperty(
+            name="Load Shiny? (Currently Not Working, rename trmtr)",
+            description="Uses rare material instead of normal one",
+            default=False,
+            )
+    def draw(self, context):
+        layout = self.layout
+
+        box = layout.box()
+        box.prop(self, 'rare')
+
+    def execute(self, context):
+        filename = os.path.basename(self.filepath)
+        directory = os.path.dirname(self.filepath)
+        f = open(os.path.join(directory, filename), "rb")
+        from_trmdl(directory, f)
+        f.close()
+        return {'FINISHED'}    
     
 def from_trmdl(filep, trmdl):
     # make collection
@@ -1855,6 +1880,16 @@ def ftell(file):
 def fclose(file):
     file.close()
 
+def menu_func_import(self, context):
+    self.layout.operator(PokeArcImport.bl_idname, text="Legends Arceus (.trmdl)")
+        
+def register():
+    bpy.utils.register_class(PokeArcImport)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
+    
+def unregister():
+    bpy.utils.unregister_class(PokeArcImport)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
-
-main()
+if __name__ == "__main__":
+    register()
