@@ -27,7 +27,7 @@ import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
-
+rare = False
     
 class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonlegendsarceus"
