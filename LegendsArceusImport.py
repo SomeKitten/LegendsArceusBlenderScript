@@ -1107,9 +1107,8 @@ def from_trmdl(filep, trmdl):
                 else:  
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
-                    material.node_tree.links.new(alb_image_texture.outputs[0], color_output)                    
-                        
-                       
+                    material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
+
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
@@ -1681,8 +1680,8 @@ def from_trmdl(filep, trmdl):
                                             else:
                                                 raise AssertionError("Unknown weights type!")
 
-                                            vert_array.append((vx, vy, vz))  # ! Y and Z are swapped, and X is negated
-                                            normal_array.append((nx, ny, nz))  # ! Y and Z are swapped, and X is negated
+                                            vert_array.append((vx, vy, vz))
+                                            normal_array.append((nx, ny, nz))
                                             # color_array.append((colorr, colorg, colorb))
                                             # alpha_array.append(colora)
                                             uv_array.append((tu, tv))
@@ -1760,7 +1759,6 @@ def from_trmdl(filep, trmdl):
                                 # LINE 3257
 
                                 new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
-                                new_mesh.use_auto_smooth = True
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
@@ -1832,7 +1830,8 @@ def from_trmdl(filep, trmdl):
                                         if len(uv4_array) > 0:
                                             uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
 
-                                # #normals
+                                #normals
+                                new_object.data.use_auto_smooth = True
                                 new_object.data.normals_split_custom_set_from_vertices(normal_array)
 
                                 # add object to scene collection
