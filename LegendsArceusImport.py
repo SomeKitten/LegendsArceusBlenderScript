@@ -1704,7 +1704,10 @@ def from_trmdl(filep, trmdl):
                                                 raise AssertionError("Unknown colors 2 type!")
 
                                             if poly_group_array[x]["bones_fmt"] == "None":
-                                                pass
+                                                bone1 = 0
+                                                bone2 = 0
+                                                bone3 = 0
+                                                bone4 = 0
                                             elif poly_group_array[x]["bones_fmt"] == "4Bytes":
                                                 bone1 = readbyte(trmbf)
                                                 bone2 = readbyte(trmbf)
@@ -1714,7 +1717,10 @@ def from_trmdl(filep, trmdl):
                                                 raise AssertionError("Unknown bones type!")
 
                                             if poly_group_array[x]["weights_fmt"] == "None":
-                                                pass
+                                                weight1 = 0
+                                                weight2 = 0
+                                                weight3 = 0
+                                                weight4 = 0
                                             elif poly_group_array[x]["weights_fmt"] == "4ShortsAsFloat":
                                                 weight1 = readshort(trmbf) / 65535
                                                 weight2 = readshort(trmbf) / 65535
