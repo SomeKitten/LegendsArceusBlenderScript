@@ -1120,6 +1120,11 @@ def from_trmdl(filep, trmdl):
                         metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
                         metalness_image_texture.image.colorspace_settings.name = "Non-Color"
                         material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
+
+                    if mat["mat_enable_emission_color_map"]:
+                        emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + ".png"))
+                        material.node_tree.links.new(emission_image_texture.outputs[0], principled_bsdf.inputs[19])                        
                         
                     if mat["mat_enable_roughness_map"]:
                         roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1165,7 +1170,12 @@ def from_trmdl(filep, trmdl):
                         if mat["mat_shader"] == "Transparent":
                             material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
                             material.node_tree.links.new(reflectionpart5.outputs[0], principled_bsdf.inputs[21])
-                            
+
+                    if mat["mat_enable_emission_color_map"]:
+                        emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + ".png"))
+                        material.node_tree.links.new(emission_image_texture.outputs[0], principled_bsdf.inputs[19])    
+                        
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
