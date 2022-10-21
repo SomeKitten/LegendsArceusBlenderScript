@@ -3,10 +3,10 @@ bl_info = {
     "author": "Scarlett/SomeKitten & ElChicoEevee",
     "version": (0, 0, 2),
     "blender": (3, 3, 0),
-    "location": "File > Import-Export",
+    "location": "File > Import",
     "description": "Blender addon for import Legends Arceus TRMDL",
     "warning": "",
-    "category": "Import-Export",
+    "category": "Import",
 }
 
 
@@ -27,7 +27,6 @@ import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
-rare = False
     
 class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonlegendsarceus"
@@ -42,7 +41,7 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
     filepath = bpy.props.StringProperty(subtype='FILE_PATH',)
     files = CollectionProperty(type=bpy.types.PropertyGroup)
     rare: BoolProperty(
-            name="Load Shiny? (Currently Not Working, rename trmtr)",
+            name="Load Shiny",
             description="Uses rare material instead of normal one",
             default=False,
             )
@@ -56,11 +55,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
         filename = os.path.basename(self.filepath)
         directory = os.path.dirname(self.filepath)
         f = open(os.path.join(directory, filename), "rb")
-        from_trmdl(directory, f)
+        from_trmdl(directory, f, self.rare)
         f.close()
         return {'FINISHED'}    
     
-def from_trmdl(filep, trmdl):
+def from_trmdl(filep, trmdl, rare):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
