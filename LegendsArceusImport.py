@@ -224,7 +224,7 @@ def from_trmdl(filep, trmdl, rare):
             new_collection.objects.link(bone_structure)
             bpy.context.view_layer.objects.active = bone_structure
             bpy.ops.object.editmode_toggle()
-
+            
             for x in range(bone_count):
                 bone_offset = ftell(trskl) + readlong(trskl)
                 bone_ret = ftell(trskl)
@@ -330,11 +330,10 @@ def from_trmdl(filep, trmdl, rare):
                     else:
                         print(f"Bone {bone_name} not found in bone rig array!")
                     bone_array.append(new_bone)
-
                 fseek(trskl, bone_ret)
-
         fclose(trskl)
-
+        bpy.ops.object.editmode_toggle()
+    
     if trmtr is not None:
         print("Parsing TRMTR...")
         trmtr_file_start = readlong(trmtr)
@@ -985,7 +984,11 @@ def from_trmdl(filep, trmdl, rare):
                     reflectionpart4.operation = "DIVIDE"
 
                     reflectionpart5 = material.node_tree.nodes.new("ShaderNodeFresnel")
-                    
+ 
+                    reflectionpart6 = material.node_tree.nodes.new("ShaderNodeMath")
+                    reflectionpart6.inputs[0].default_value = 0.25
+                    reflectionpart6.operation = "SUBTRACT"
+ 
                     material.node_tree.links.new(reflectionpart1.outputs[0], reflectionpart2.inputs[1])
                     material.node_tree.links.new(reflectionpart1.outputs[0], reflectionpart3.inputs[1])
                     material.node_tree.links.new(reflectionpart2.outputs[0], reflectionpart4.inputs[0])
@@ -1112,7 +1115,8 @@ def from_trmdl(filep, trmdl, rare):
                         material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
                         if mat["mat_shader"] == "Transparent":
                             material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
-                            material.node_tree.links.new(reflectionpart5.outputs[0], principled_bsdf.inputs[21])
+                            material.node_tree.links.new(reflectionpart5.outputs[0], reflectionpart6.inputs[1])                            
+                            material.node_tree.links.new(reflectionpart6.outputs[0], principled_bsdf.inputs[21])
                         
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1892,9 +1896,9 @@ def from_trmdl(filep, trmdl, rare):
                                 #normals
                                 new_object.data.use_auto_smooth = True
                                 new_object.data.normals_split_custom_set_from_vertices(normal_array)
-
                                 # add object to scene collection
                                 new_collection.objects.link(new_object)
+
 
 
 def readbyte(file):
