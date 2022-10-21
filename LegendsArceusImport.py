@@ -4,7 +4,7 @@ bl_info = {
     "version": (0, 0, 2),
     "blender": (3, 3, 0),
     "location": "File > Import-Export",
-    "description": "A tool designed to import LMD files from the mobile game Pokemon Masters",
+    "description": "Blender addon for import Legends Arceus TRMDL",
     "warning": "",
     "category": "Import-Export",
 }
@@ -27,7 +27,6 @@ import math
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
-rare = False
     
 class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonlegendsarceus"
@@ -363,6 +362,7 @@ def from_trmdl(filep, trmdl):
                 mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
                 mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
                 mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
+                mat_reflectance = 0.0
                 mat_offset = ftell(trmtr) + readlong(trmtr)
                 mat_ret = ftell(trmtr)
 
@@ -673,7 +673,8 @@ def from_trmdl(filep, trmdl):
                         elif mat_param_e_string == "MetallicLayer2": mat_mtl_layer2 = mat_param_e_value
                         elif mat_param_e_string == "MetallicLayer3": mat_mtl_layer3 = mat_param_e_value
                         elif mat_param_e_string == "MetallicLayer4": mat_mtl_layer4 = mat_param_e_value
-
+                        elif mat_param_e_string == "Reflectance": mat_reflectance = mat_param_e_value
+                        
                         print(f"(param_e) {mat_param_e_string}: {mat_param_e_value}")
                         fseek(trmtr, mat_param_e_ret)
 
@@ -927,6 +928,7 @@ def from_trmdl(filep, trmdl):
                     "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
                     "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
                     "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
+                    "mat_reflectance": mat_reflectance,
                     "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v,
                     "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v,
                     "mat_enable_base_color_map": mat_enable_base_color_map,
@@ -957,10 +959,39 @@ def from_trmdl(filep, trmdl):
                 material.node_tree.links.new(principled_bsdf.outputs[0], material_output.inputs[0])
 
                 print(f"mat_shader = {mat['mat_shader']}")
-
+                
+                material.blend_method = ("HASHED")
+                material.shadow_method = ("OPAQUE")
+                
                 color_output = principled_bsdf.inputs[0]
                 if mat["mat_shader"] == "Unlit":
                     color_output = material_output.inputs[0]
+                if mat["mat_shader"] == "Transparent":
+                    material.blend_method = ("BLEND")
+                    reflectionpart1 = material.node_tree.nodes.new("ShaderNodeMath")
+                    reflectionpart1.operation = "SQRT"
+                    reflectionpart1.inputs[0].default_value = mat["mat_reflectance"]
+
+                    reflectionpart2 = material.node_tree.nodes.new("ShaderNodeMath")
+                    reflectionpart2.inputs[0].default_value = 1.0
+                    reflectionpart2.operation = "ADD"
+                    
+                    reflectionpart3 = material.node_tree.nodes.new("ShaderNodeMath")
+                    reflectionpart3.inputs[0].default_value = 1.0
+                    reflectionpart3.operation = "SUBTRACT"
+
+                    reflectionpart4 = material.node_tree.nodes.new("ShaderNodeMath")
+                    reflectionpart4.operation = "DIVIDE"
+
+                    reflectionpart5 = material.node_tree.nodes.new("ShaderNodeFresnel")
+                    
+                    material.node_tree.links.new(reflectionpart1.outputs[0], reflectionpart2.inputs[1])
+                    material.node_tree.links.new(reflectionpart1.outputs[0], reflectionpart3.inputs[1])
+                    material.node_tree.links.new(reflectionpart2.outputs[0], reflectionpart4.inputs[0])
+                    material.node_tree.links.new(reflectionpart3.outputs[0], reflectionpart4.inputs[1])
+                    material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
+                    
+                material.use_backface_culling = True
                 
                 uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
                 separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
@@ -1051,6 +1082,7 @@ def from_trmdl(filep, trmdl):
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
                         material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
+                        material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
                         material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
                         
                     if mat["mat_enable_highlight_map"]:
@@ -1075,6 +1107,9 @@ def from_trmdl(filep, trmdl):
                         material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
                         material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
                         material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                        if mat["mat_shader"] == "Transparent":
+                            material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
+                            material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
                         
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1108,6 +1143,7 @@ def from_trmdl(filep, trmdl):
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
                     material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
+                    material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
 
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1122,7 +1158,10 @@ def from_trmdl(filep, trmdl):
                         material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
                         material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
                         material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
-                        
+                        if mat["mat_shader"] == "Transparent":
+                            material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
+                            material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
+                            
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
