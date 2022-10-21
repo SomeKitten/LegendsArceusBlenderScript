@@ -34,10 +34,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_label = "Import"
     bl_options = {'PRESET', 'UNDO'}
     filename_ext = ".trmdl"
-    filter_glob = StringProperty(
+    filter_glob: StringProperty(
             default="*.trmdl",
             options={'HIDDEN'},
-            )
+            maxlen=255,
+    )
     filepath = bpy.props.StringProperty(subtype='FILE_PATH',)
     files = CollectionProperty(type=bpy.types.PropertyGroup)
     rare: BoolProperty(
@@ -333,7 +334,7 @@ def from_trmdl(filep, trmdl):
 
                 fseek(trskl, bone_ret)
 
-    fclose(trskl)
+        fclose(trskl)
 
     if trmtr is not None:
         print("Parsing TRMTR...")
@@ -1727,8 +1728,9 @@ def from_trmdl(filep, trmdl):
                                             # color_array.append((colorr, colorg, colorb))
                                             # alpha_array.append(colora)
                                             uv_array.append((tu, tv))
-                                            w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
-                                            b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
+                                            if trskl is not None:
+                                                w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
+                                                b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
                                             # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
