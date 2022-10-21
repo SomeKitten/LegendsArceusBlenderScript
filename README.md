@@ -16,4 +16,6 @@ Pokémon: https://drive.google.com/file/d/1dITgyrvozPXmH0WOnFfFvMB1DRC5Idqs/view
 
 Trainers: https://drive.google.com/file/d/1yyMBpUxzEFzJsSVf07hZdje7ubTrYPzG/view?usp=sharing
 
+Items: https://drive.google.com/file/d/1gLVOnC0ouKo3dKWSFwImYH2ut9mGyXzK/view?usp=sharing
+
 Blender script made/ported by @SomeKitten 
