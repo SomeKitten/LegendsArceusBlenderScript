@@ -1017,9 +1017,11 @@ def from_trmdl(filep, trmdl):
                     
                 if chara_check == "Pokemon":
                     # LAYER MASK MAP
+                    
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
-                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                    if "lym" in mat["mat_lym0"]:
+                        lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
+                        lym_image_texture.image.colorspace_settings.name = "Non-Color"
                     huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
                     huesaturationvalue.inputs[2].default_value = 2.0
                     huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
@@ -1109,7 +1111,7 @@ def from_trmdl(filep, trmdl):
                         material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
                         if mat["mat_shader"] == "Transparent":
                             material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
-                            material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
+                            material.node_tree.links.new(reflectionpart5.outputs[0], principled_bsdf.inputs[21])
                         
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1160,7 +1162,7 @@ def from_trmdl(filep, trmdl):
                         material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
                         if mat["mat_shader"] == "Transparent":
                             material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
-                            material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
+                            material.node_tree.links.new(reflectionpart5.outputs[0], principled_bsdf.inputs[21])
                             
                     if mat["mat_enable_metallic_map"]:
                         metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
