@@ -9,7 +9,8 @@ bl_info = {
     "category": "Import",
 }
 
-
+import os
+from os import path
 import os.path
 import random
 import struct
@@ -21,9 +22,17 @@ from bpy.props import (BoolProperty,
                        CollectionProperty
                        )
 from bpy_extras.io_utils import ImportHelper
+from bpy.types import (
+        Operator,
+        OperatorFileListElement,
+        )
 import bpy
 import mathutils
 import math
+import glob
+import shutil
+import sys
+
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
 IN_BLENDER_ENV = True
@@ -45,20 +54,37 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
+    multiple: BoolProperty(
+            name="Load All Folder",
+            description="Uses rare material instead of normal one",
+            default=False,
+            )
     def draw(self, context):
         layout = self.layout
 
         box = layout.box()
         box.prop(self, 'rare')
+        
+        box = layout.box()
+        box.prop(self, 'multiple')
 
     def execute(self, context):
-        filename = os.path.basename(self.filepath)
         directory = os.path.dirname(self.filepath)
-        f = open(os.path.join(directory, filename), "rb")
-        from_trmdl(directory, f, self.rare)
-        f.close()
-        return {'FINISHED'}    
-    
+        if self.multiple == False:
+            filename = os.path.basename(self.filepath)        
+            f = open(os.path.join(directory, filename), "rb")
+            from_trmdl(directory, f, self.rare)
+            f.close()
+            return {'FINISHED'}  
+        else:
+            file_list = sorted(os.listdir(directory))
+            obj_list = [item for item in file_list if item.endswith('.trmdl')]
+            for item in obj_list:
+                f = open(os.path.join(directory, item), "rb")
+                from_trmdl(directory, f, self.rare)
+                f.close()
+            return {'FINISHED'}
+
 def from_trmdl(filep, trmdl, rare):
     # make collection
     if IN_BLENDER_ENV:
@@ -219,8 +245,8 @@ def from_trmdl(filep, trmdl, rare):
             trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
             bone_count = readlong(trskl)
 
-            new_armature = bpy.data.armatures.new("Armature")
-            bone_structure = bpy.data.objects.new("Armature", new_armature)
+            new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
+            bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
             new_collection.objects.link(bone_structure)
             bpy.context.view_layer.objects.active = bone_structure
             bpy.ops.object.editmode_toggle()
@@ -1151,11 +1177,12 @@ def from_trmdl(filep, trmdl, rare):
                             material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                else:  
-                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
-                    material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
-                    material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
+                else:
+                    if mat["mat_enable_base_color_map"]:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
+                        material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
+                        material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
 
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
