@@ -59,6 +59,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
+    loadlods: BoolProperty(
+            name="Load LODS",
+            description="Uses rare material instead of normal one",
+            default=False,
+            )
     def draw(self, context):
         layout = self.layout
 
@@ -67,13 +72,16 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
         
         box = layout.box()
         box.prop(self, 'multiple')
+        
+        box = layout.box()
+        box.prop(self, 'loadlods')
 
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
             f = open(os.path.join(directory, filename), "rb")
-            from_trmdl(directory, f, self.rare)
+            from_trmdl(directory, f, self.rare, self.loadlods)
             f.close()
             return {'FINISHED'}  
         else:
@@ -81,11 +89,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdl(directory, f, self.rare)
+                from_trmdl(directory, f, self.rare, self.loadlods)
                 f.close()
             return {'FINISHED'}
 
-def from_trmdl(filep, trmdl, rare):
+def from_trmdl(filep, trmdl, rare, loadlods):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
@@ -1228,6 +1236,9 @@ def from_trmdl(filep, trmdl, rare):
                         material.node_tree.links.new(alb_image_texture.outputs[0], mix_color6.inputs[1])
                         material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                         material.node_tree.links.new(mix_color6.outputs[0], color_output)
+
+    if loadlods == False:
+        trmsh_count = 1
                         
     for w in range(trmsh_count):
         if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
