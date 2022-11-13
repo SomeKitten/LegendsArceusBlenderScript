@@ -1128,7 +1128,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     
                     if mat["mat_enable_base_color_map"]:
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        if mat["mat_col0"] is not "":
+                        if "_alb" in mat["mat_col0"]:
                             alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
                         material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
@@ -1173,7 +1173,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         
                     if mat["mat_enable_ao_map"]:
                         ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        if mat["mat_ao0"] is not "":
+                        if "_ao" in mat["mat_ao0"]:            
                             ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
                             ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
                         mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
