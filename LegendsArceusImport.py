@@ -288,7 +288,15 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     trskl_bone_struct_ptr_bone_merge = readshort(trskl)
                     trskl_bone_struct_ptr_h = readshort(trskl)
                 else:
-                    raise AssertionError("Unexpected TRSKL bone struct length!")
+                    trskl_bone_struct_ptr_section_len = readshort(trskl)
+                    trskl_bone_struct_ptr_string = readshort(trskl)
+                    trskl_bone_struct_ptr_bone = readshort(trskl)
+                    trskl_bone_struct_ptr_c = readshort(trskl)
+                    trskl_bone_struct_ptr_d = readshort(trskl)
+                    trskl_bone_struct_ptr_parent = readshort(trskl)
+                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
+                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
+                    trskl_bone_struct_ptr_h = readshort(trskl)
 
                 if trskl_bone_struct_ptr_bone_merge != 0:
                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
@@ -1120,19 +1128,12 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     
                     if mat["mat_enable_base_color_map"]:
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
+                        if mat["mat_col0"] is None:
+                            alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
                         material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
                         material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
                         
-                    if mat["mat_enable_highlight_map"]:
-                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
-                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
-                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
-                        material.node_tree.links.new(highlight_image_texture.outputs[0], principled_bsdf.inputs[19])
                         
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1172,8 +1173,9 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         
                     if mat["mat_enable_ao_map"]:
                         ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
-                        ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                        if mat["mat_col0"] is None:
+                            ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
+                            ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
                         mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                         mix_color6.blend_type = "MULTIPLY"
                         mix_color6.inputs[0].default_value = 1.0
@@ -1320,8 +1322,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             fseek(trmsh, poly_group_struct)
                             poly_group_struct_len = readshort(trmsh)
 
-                            if poly_group_struct_len != 0x001E:
-                                raise AssertionError("Unexpected PolyGroup struct length!")
+
                             poly_group_struct_section_len = readshort(trmsh)
                             poly_group_struct_ptr_poly_group_name = readshort(trmsh)
                             poly_group_struct_ptr_bbbox = readshort(trmsh)
@@ -1605,8 +1606,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             vert_buffer_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_struct)
                             vert_buffer_struct_len = readshort(trmbf)
 
-                            if vert_buffer_struct_len != 0x0008:
-                                raise AssertionError("Unexpected vertex buffer struct length!")
                             vert_buffer_struct_section_length = readshort(trmbf)
                             vert_buffer_struct_ptr_faces = readshort(trmbf)
                             vert_buffer_struct_ptr_verts = readshort(trmbf)
