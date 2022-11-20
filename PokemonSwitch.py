@@ -423,6 +423,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                 mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
                 mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
                 mat_reflectance = 0.0
+                mat_emm_intensity = 1.0
                 mat_offset = ftell(trmtr) + readlong(trmtr)
                 mat_ret = ftell(trmtr)
 
@@ -734,6 +735,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                         elif mat_param_e_string == "MetallicLayer3": mat_mtl_layer3 = mat_param_e_value
                         elif mat_param_e_string == "MetallicLayer4": mat_mtl_layer4 = mat_param_e_value
                         elif mat_param_e_string == "Reflectance": mat_reflectance = mat_param_e_value
+                        elif mat_param_e_string == "EmissionIntensity": mat_emm_intensity = mat_param_e_value
                         
                         print(f"(param_e) {mat_param_e_string}: {mat_param_e_value}")
                         fseek(trmtr, mat_param_e_ret)
@@ -999,6 +1001,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
                     "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
                     "mat_reflectance": mat_reflectance,
+                    "mat_emm_intensity": mat_emm_intensity,
                     "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v,
                     "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v,
                     "mat_enable_base_color_map": mat_enable_base_color_map,
@@ -1111,7 +1114,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
                     emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
                     emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
-                    if emcolor1 and emcolor2 and emcolor3 and emcolor4 == (1.0, 1.0, 1.0, 1.0):
+                    if emcolor1 == (1.0, 1.0, 1.0, 1.0) and emcolor2 == (1.0, 1.0, 1.0, 1.0) and emcolor3 == (1.0, 1.0, 1.0, 1.0) and emcolor4 == (1.0, 1.0, 1.0, 1.0):
                         emcolor1 = (0.0, 0.0, 0.0, 0.0)
                         emcolor2 = (0.0, 0.0, 0.0, 0.0)
                         emcolor3 = (0.0, 0.0, 0.0, 0.0)
@@ -1179,7 +1182,8 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
                     material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
                     material.node_tree.links.new(mix_emcolor4.outputs[0], principled_bsdf.inputs[19]) 
-                    
+              
+                    principled_bsdf.inputs[20].default_value = mat_emm_intensity
                     separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
                     material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
                     material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
@@ -1262,14 +1266,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
                     
-                    if color1 and color2 and color3 and color4 == (1.0, 1.0, 1.0, 1.0):
+                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
                         material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
                         
-                    if mix_emcolor1.inputs[2].default_value and mix_emcolor2.inputs[2].default_value and mix_emcolor3.inputs[2].default_value and mix_emcolor4.inputs[2].default_value == (1.0, 1.0, 1.0, 1.0):
-                        mix_emcolor1.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
-                        mix_emcolor2.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
-                        mix_emcolor3.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
-                        mix_emcolor4.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
                 else:
                     if mat["mat_enable_base_color_map"]:
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
