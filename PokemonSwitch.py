@@ -1105,17 +1105,26 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                     color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
                     color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
-
+                    
+                    
                     emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
                     emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
-                    emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)
+                    emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
                     emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
-    
+                    if emcolor1 and emcolor2 and emcolor3 and emcolor4 == (1.0, 1.0, 1.0, 1.0):
+                        emcolor1 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor2 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor3 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor4 = (0.0, 0.0, 0.0, 0.0)
                     print(f'Material {mat["mat_name"]}:')
                     print(f"Color 1: {color1}")
                     print(f"Color 2: {color2}")
                     print(f"Color 3: {color3}")
                     print(f"Color 4: {color4}")
+                    print(f"Emission Color 1: {emcolor1}")
+                    print(f"Emission Color 2: {emcolor2}")
+                    print(f"Emission Color 3: {emcolor3}")
+                    print(f"Emission Color 4: {emcolor4}")
                     print("---")
      
                     mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
@@ -1252,6 +1261,15 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                    
+                    if color1 and color2 and color3 and color4 == (1.0, 1.0, 1.0, 1.0):
+                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
+                        
+                    if mix_emcolor1.inputs[2].default_value and mix_emcolor2.inputs[2].default_value and mix_emcolor3.inputs[2].default_value and mix_emcolor4.inputs[2].default_value == (1.0, 1.0, 1.0, 1.0):
+                        mix_emcolor1.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
+                        mix_emcolor2.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
+                        mix_emcolor3.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
+                        mix_emcolor4.inputs[2].default_value = (0.0, 0.0, 0.0, 1.0)
                 else:
                     if mat["mat_enable_base_color_map"]:
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1949,7 +1967,6 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
 
                                                 group = None
                                                 if new_object.vertex_groups.get(bone_id) == None:
-                                                    print(f"Creating vertex group {bone_id}")
                                                     group = new_object.vertex_groups.new(name=bone_id)
                                                 else:
                                                     group = new_object.vertex_groups[bone_id]
