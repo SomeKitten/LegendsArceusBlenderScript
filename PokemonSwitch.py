@@ -414,6 +414,12 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                 mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
                 mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
                 mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
+
+                mat_emcolor1_r = 1.0; mat_emcolor1_g = 1.0; mat_emcolor1_b = 1.0
+                mat_emcolor2_r = 1.0; mat_emcolor2_g = 1.0; mat_emcolor2_b = 1.0
+                mat_emcolor3_r = 1.0; mat_emcolor3_g = 1.0; mat_emcolor3_b = 1.0
+                mat_emcolor4_r = 1.0; mat_emcolor4_g = 1.0; mat_emcolor4_b = 1.0
+                mat_emcolor5_r = 1.0; mat_emcolor5_g = 1.0; mat_emcolor5_b = 1.0                
                 mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
                 mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
                 mat_reflectance = 0.0
@@ -837,6 +843,11 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                         elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer4": mat_color4_r = mat_param_h_value1; mat_color4_g = mat_param_h_value2; mat_color4_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer1": mat_emcolor1_r = mat_param_h_value1; mat_emcolor1_g = mat_param_h_value2; mat_emcolor1_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer2": mat_emcolor2_r = mat_param_h_value1; mat_emcolor2_g = mat_param_h_value2; mat_emcolor2_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer3": mat_emcolor3_r = mat_param_h_value1; mat_emcolor3_g = mat_param_h_value2; mat_emcolor3_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer4": mat_emcolor4_r = mat_param_h_value1; mat_emcolor4_g = mat_param_h_value2; mat_emcolor4_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer5": mat_emcolor5_r = mat_param_h_value1; mat_emcolor5_g = mat_param_h_value2; mat_emcolor5_b = mat_param_h_value3
                         else: print(f"Unknown mat_param_h: {mat_param_h_string}")
 
                         print(f"(param_h) {mat_param_h_string}: {mat_param_h_value1}, {mat_param_h_value2}, {mat_param_h_value3}, {mat_param_h_value4}")
@@ -980,6 +991,11 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
                     "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
                     "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
+                    "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
+                    "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
+                    "mat_emcolor3_r": mat_emcolor3_r, "mat_emcolor3_g": mat_emcolor3_g, "mat_emcolor3_b": mat_emcolor3_b,
+                    "mat_emcolor4_r": mat_emcolor4_r, "mat_emcolor4_g": mat_emcolor4_g, "mat_emcolor4_b": mat_emcolor4_b,
+                    "mat_emcolor5_r": mat_emcolor5_r, "mat_emcolor5_g": mat_emcolor5_g, "mat_emcolor5_b": mat_emcolor5_b,
                     "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
                     "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
                     "mat_reflectance": mat_reflectance,
@@ -1089,6 +1105,11 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
                     color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
                     color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+
+                    emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
+                    emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
+                    emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)
+                    emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
     
                     print(f'Material {mat["mat_name"]}:')
                     print(f"Color 1: {color1}")
@@ -1119,11 +1140,36 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     mix_color5.inputs[1].default_value = (0, 0, 0, 0)
                     mix_color5.inputs[2].default_value = (1, 1, 1, 1)
                     
+                    
+                    
+                    mix_emcolor1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor1.blend_type = blend_type
+                    mix_emcolor1.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor1.inputs[2].default_value = emcolor1
+                    mix_emcolor2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor2.blend_type = blend_type
+                    mix_emcolor2.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor2.inputs[2].default_value = emcolor2
+                    mix_emcolor3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor3.blend_type = blend_type
+                    mix_emcolor3.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor3.inputs[2].default_value = emcolor3
+                    mix_emcolor4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor4.blend_type = blend_type
+                    mix_emcolor4.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor4.inputs[2].default_value = emcolor4
+                    
                     material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
                     material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
                     material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
                     material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
                     material.node_tree.links.new(mix_color4.outputs[0], color_output)
+
+                    material.node_tree.links.new(mix_emcolor1.outputs[0], mix_emcolor2.inputs[1])
+                    material.node_tree.links.new(mix_emcolor2.outputs[0], mix_emcolor3.inputs[1])
+                    material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
+                    material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
+                    material.node_tree.links.new(mix_emcolor4.outputs[0], principled_bsdf.inputs[19]) 
                     
                     separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
                     material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
@@ -1133,18 +1179,21 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
                     material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
                     material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
+
+                    material.node_tree.links.new(separate_color.outputs[0], mix_emcolor1.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[1], mix_emcolor2.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[2], mix_emcolor3.inputs[0])
+                    material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_emcolor4.inputs[0])
     
                     material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
                     material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
                     material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
                     
-                    if mat["mat_enable_base_color_map"]:
-                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
-                            alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
-                        material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
-                        material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
+                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
+                    material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
+                    material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
+                    material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
                         
                         
                     if mat["mat_enable_normal_map"]:
