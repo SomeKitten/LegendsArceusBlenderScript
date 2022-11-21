@@ -134,14 +134,39 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
     trmdl_struct_len = readshort(trmdl)
 
 
-    trmdl_struct_section_len = readshort(trmdl)
-    trmdl_struct_start = readshort(trmdl)
-    trmdl_struct_trmsh = readshort(trmdl)
-    trmdl_struct_trskl = readshort(trmdl)
-    trmdl_struct_trmtr = readshort(trmdl)
-    trmdl_struct_custom = readshort(trmdl)
-    trmdl_struct_bound_box = readshort(trmdl)
-    trmdl_struct_float = readshort(trmdl)
+    if trmdl_struct_len == 0x0012:
+        trmdl_struct_section_len = readshort(trmdl)
+        trmdl_struct_start = readshort(trmdl)
+        trmdl_struct_trmsh = readshort(trmdl)
+        trmdl_struct_trskl = readshort(trmdl)
+        trmdl_struct_trmtr = readshort(trmdl)
+        trmdl_struct_custom = readshort(trmdl)
+        trmdl_struct_bound_box = readshort(trmdl)
+        trmdl_struct_float = readshort(trmdl)
+    elif trmdl_struct_len == 0x0014: #ScarletViolet Only
+        trmdl_struct_section_len = readshort(trmdl)
+        trmdl_struct_start = readshort(trmdl)
+        trmdl_struct_trmsh = readshort(trmdl)
+        trmdl_struct_trskl = readshort(trmdl)
+        trmdl_struct_trmtr = readshort(trmdl)
+        trmdl_struct_custom = readshort(trmdl)
+        trmdl_struct_bound_box = readshort(trmdl)
+        trmdl_struct_float = readshort(trmdl)
+        trmdl_struct_trltt = readshort(trmdl)
+    elif trmdl_struct_len == 0x0018: #ScarletViolet Only
+        trmdl_struct_section_len = readshort(trmdl)
+        trmdl_struct_start = readshort(trmdl)
+        trmdl_struct_trmsh = readshort(trmdl)
+        trmdl_struct_trskl = readshort(trmdl)
+        trmdl_struct_trmtr = readshort(trmdl)
+        trmdl_struct_custom = readshort(trmdl)
+        trmdl_struct_bound_box = readshort(trmdl)
+        trmdl_struct_float = readshort(trmdl)
+        trmdl_struct_trltt = readshort(trmdl)
+        trmdl_struct_unka = readshort(trmdl)
+        trmdl_struct_unkb = readshort(trmdl)
+    else:
+        raise AssertionError("Unexpected TRMDL header struct length!")
 
     if trmdl_struct_trmsh != 0:
         fseek(trmdl, trmdl_file_start + trmdl_struct_trmsh)
