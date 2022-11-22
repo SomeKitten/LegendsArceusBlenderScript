@@ -257,7 +257,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
 
     # TODO create bone_rig_array
     # LINE 1247
-
+    if chara_check == "Rei" or chara_check == "Akari":
+        trskl = trskl = open(os.path.join(filep, "p0_base.trskl"), "rb")
+    
     if trskl is not None:
         print("Parsing TRSKL...")
         trskl_file_start = readlong(trskl)
@@ -1208,7 +1210,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
                     material.node_tree.links.new(mix_emcolor4.outputs[0], principled_bsdf.inputs[19]) 
               
-                    principled_bsdf.inputs[20].default_value = mat_emm_intensity
+                    
                     separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
                     material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
                     material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
@@ -1226,12 +1228,26 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
                     material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
                     material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
-                    
+
                     alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
-                    material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
+                    material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
                     material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
                     material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
+
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        else:
+                            print(NoHighlight)
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
+                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
+                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
                         
                         
                     if mat["mat_enable_normal_map"]:
@@ -1301,6 +1317,18 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
+
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        else:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"                        
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
+                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
+                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
 
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
