@@ -1308,8 +1308,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
                     
-                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
+
                         
                 else:
                     if mat["mat_enable_base_color_map"]:
@@ -1318,6 +1317,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
+
+                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
+                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
 
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1718,6 +1720,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                             weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
                                         else:
                                             raise AssertionError("Unknown vertex type!")
+
 
                                         fseek(trmsh, vert_buff_param_ret)
 
