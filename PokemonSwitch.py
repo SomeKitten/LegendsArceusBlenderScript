@@ -1119,7 +1119,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                 material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
                 material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
                     
-                if chara_check == "Pokemon":
+                if chara_check == "Pokemon" or mat["mat_name"] == "eye":
                     # LAYER MASK MAP
                     
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1245,7 +1245,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
                             highlight_image_texture.image.colorspace_settings.name = "Non-Color"
                         else:
-                            print(NoHighlight)
+                            print("No Highlight")
                         material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
                         material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
                         material.node_tree.links.new(mix_color5.outputs[0], color_output)
