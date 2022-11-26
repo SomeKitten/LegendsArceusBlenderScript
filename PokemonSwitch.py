@@ -1229,8 +1229,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
                     material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
                 
-                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    
                     if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
@@ -1307,9 +1308,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                    
-                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
+                    if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                        if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
+                            material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
 
                         
                 else:
