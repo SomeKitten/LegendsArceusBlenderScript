@@ -1228,9 +1228,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                     material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
                     material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
                     material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
-                    
+                
+                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                     if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
-                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
