@@ -1461,7 +1461,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
-                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"
+                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"; svunk_fmt = "None"
 
                             poly_group_offset = ftell(trmsh) + readlong(trmsh)
                             poly_group_ret = ftell(trmsh)
@@ -1723,6 +1723,14 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                 raise AssertionError("Unexpected weights format!")
 
                                             weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                        elif vert_buff_param_type == 0x09:
+                                            if vert_buff_param_layer != 0:
+                                                raise AssertionError("Unexpected ?????? layer!")
+
+                                            if vert_buff_param_format != 0x24:
+                                                raise AssertionError("Unexpected ?????? layer!")
+
+                                            svunk_fmt = "1Long?"; vert_buffer_stride = vert_buffer_stride + 0x04
                                         else:
                                             raise AssertionError("Unknown vertex type!")
 
@@ -1745,7 +1753,8 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                     "colors_fmt": colors_fmt,
                                     "colors2_fmt": colors2_fmt,
                                     "bones_fmt": bones_fmt,
-                                    "weights_fmt": weights_fmt
+                                    "weights_fmt": weights_fmt,
+                                    "svunk_fmt":svunk_fmt
                                 }
                             )
                             fseek(trmsh, poly_group_ret)
