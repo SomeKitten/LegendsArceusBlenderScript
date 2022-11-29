@@ -1778,7 +1778,10 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
-                                    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    if y == 0:
+                                        print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    else:
+                                        print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
 
@@ -1947,7 +1950,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                 w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
                                                 b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
-                                            # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                        print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
 
                             if vert_buffer_struct_ptr_faces != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
