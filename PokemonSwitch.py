@@ -1952,6 +1952,28 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                     b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
 
                                             print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                        else:
+                                            print(f"Vertex buffer {x} morph {y} start: {hex(ftell(trmbf))}")
+                                            #MorphVert_array = #()
+                                            #MorphNormal_array = #()
+                                            for v in range(int(vert_buffer_byte_count / 0x1C)):
+                                                #Morphs always seem to use this setup.
+                                                vx = readlong(trmbf)
+                                                vy = readlong(trmbf)
+                                                vz = readlong(trmbf)
+                                                nx = readhalffloat(trmbf)
+                                                ny = readhalffloat(trmbf)
+                                                nz = readhalffloat(trmbf)
+                                                nq = readhalffloat(trmbf)
+                                                tanx = readhalffloat(trmbf)
+                                                tany = readhalffloat(trmbf)
+                                                tanz = readhalffloat(trmbf)
+                                                tanq = readhalffloat(trmbf)
+                                                #append MorphVert_array [vx,vy,vz]
+                                                #append MorphNormal_array [nx,ny,nz]
+                                            print(f"Vertex buffer {x} morph {y} end: {hex(ftell(trmbf))}")
+                                            #TODO: Continue implementing after line 3814
+                                    fseek(trmbf,vert_buffer_sub_ret)
 
                             if vert_buffer_struct_ptr_faces != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
