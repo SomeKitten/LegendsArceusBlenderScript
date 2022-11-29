@@ -292,11 +292,12 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
             trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
             bone_count = readlong(trskl)
 
-            new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
-            bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
-            new_collection.objects.link(bone_structure)
-            bpy.context.view_layer.objects.active = bone_structure
-            bpy.ops.object.editmode_toggle()
+            if IN_BLENDER_ENV:
+                new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
+                bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
+                new_collection.objects.link(bone_structure)
+                bpy.context.view_layer.objects.active = bone_structure
+                bpy.ops.object.editmode_toggle()
             
             for x in range(bone_count):
                 bone_offset = ftell(trskl) + readlong(trskl)
@@ -391,29 +392,31 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                         mathutils.Euler((bone_rx, bone_ry, bone_rz)),
                         (bone_sx, bone_sy, bone_sz))
 
-                    new_bone = new_armature.edit_bones.new(bone_name)
+                    if IN_BLENDER_ENV:
+                        new_bone = new_armature.edit_bones.new(bone_name)
 
-                    new_bone.use_connect = False
-                    new_bone.use_inherit_rotation = True
-                    new_bone.use_inherit_scale = True
-                    new_bone.use_local_location = True
+                        new_bone.use_connect = False
+                        new_bone.use_inherit_rotation = True
+                        new_bone.use_inherit_scale = True
+                        new_bone.use_local_location = True
 
-                    new_bone.head = (0, 0, 0)
-                    new_bone.tail = (0, 0, 0.1)
-                    new_bone.matrix = bone_matrix
+                        new_bone.head = (0, 0, 0)
+                        new_bone.tail = (0, 0, 0.1)
+                        new_bone.matrix = bone_matrix
 
-                    if bone_parent != 0:
-                        new_bone.parent = bone_array[bone_parent]
-                        new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
+                        if bone_parent != 0:
+                            new_bone.parent = bone_array[bone_parent]
+                            new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
 
-                    if bone_name in bone_rig_array:
-                        bone_id_map[bone_rig_array.index(bone_name)] = bone_name
-                    else:
-                        print(f"Bone {bone_name} not found in bone rig array!")
-                    bone_array.append(new_bone)
+                        if bone_name in bone_rig_array:
+                            bone_id_map[bone_rig_array.index(bone_name)] = bone_name
+                        else:
+                            print(f"Bone {bone_name} not found in bone rig array!")
+                        bone_array.append(new_bone)
                 fseek(trskl, bone_ret)
         fclose(trskl)
-        bpy.ops.object.editmode_toggle()
+        if IN_BLENDER_ENV:
+            bpy.ops.object.editmode_toggle()
     
     if trmtr is not None:
         print("Parsing TRMTR...")
