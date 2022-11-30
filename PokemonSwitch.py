@@ -1459,7 +1459,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             w1_array = []
                             weight_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
-                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"
+                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
                             colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"; svunk_fmt = "None"
 
@@ -1667,6 +1667,11 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                     raise AssertionError("Unexpected bitangents format!")
 
                                                 bitangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                            elif vert_buff_param_layer == 2:
+                                                if vert_buff_param_format != 0x2B:
+                                                    raise AssertionError("Unexpected tritangents format!")
+
+                                                tritangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
                                             else:
                                                 raise AssertionError("Unexpected tangents layer!")
                                         elif vert_buff_param_type == 0x05:
@@ -1746,6 +1751,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                     "normals_fmt": normals_fmt,
                                     "tangents_fmt": tangents_fmt,
                                     "bitangents_fmt": bitangents_fmt,
+                                    "tritangents_fmt":tritangents_fmt,
                                     "uvs_fmt": uvs_fmt,
                                     "uvs2_fmt": uvs2_fmt,
                                     "uvs3_fmt": uvs3_fmt,
@@ -1847,6 +1853,20 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                     bitanx = readfloat(trmbf)
                                                     bitany = readfloat(trmbf)
                                                     bitanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bitangents type!")
+
+                                                if poly_group_array[x]["tritangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["tritangents_fmt"] == "4HalfFloats":
+                                                    tritanx = readhalffloat(trmbf)
+                                                    tritany = readhalffloat(trmbf)
+                                                    tritanz = readhalffloat(trmbf)
+                                                    tritanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["tritangents_fmt"] == "3Floats":
+                                                    tritanx = readfloat(trmbf)
+                                                    tritany = readfloat(trmbf)
+                                                    tritanz = readfloat(trmbf)
                                                 else:
                                                     raise AssertionError("Unknown bitangents type!")
 
