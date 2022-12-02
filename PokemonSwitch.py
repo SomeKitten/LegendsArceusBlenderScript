@@ -64,11 +64,7 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
-    usedds: BoolProperty(
-            name="Use DDS Textures",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
+
     def draw(self, context):
         layout = self.layout
 
@@ -81,8 +77,6 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
         box = layout.box()
         box.prop(self, 'loadlods')
         
-        box = layout.box()
-        box.prop(self, 'usedds')
         
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
@@ -90,7 +84,7 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             filename = os.path.basename(self.filepath)    
             f = open(os.path.join(directory, filename), "rb")
             start = time.time()
-            from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
+            from_trmdl(directory, f, self.rare, self.loadlods)
             f.close()
             end = time.time()
             print("Time Taken to load:{}".format(end - start))
@@ -108,16 +102,13 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             print("Time Taken to load:{}".format(end - start))
             return {'FINISHED'}
 
-def from_trmdl(filep, trmdl, rare, loadlods, usedds):
+def from_trmdl(filep, trmdl, rare, loadlods):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
         bpy.context.scene.collection.children.link(new_collection)
 
-    if usedds == True:
-        textureextension = ".dds"
-    else:
-        textureextension = ".png"
+    textureextension = ".png"
 
 
     materials = []
