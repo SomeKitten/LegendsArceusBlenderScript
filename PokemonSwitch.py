@@ -1142,10 +1142,13 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
                     emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
                     emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
-                    if emcolor1 == (1.0, 1.0, 1.0, 1.0) and emcolor2 == (1.0, 1.0, 1.0, 1.0) and emcolor3 == (1.0, 1.0, 1.0, 1.0) and emcolor4 == (1.0, 1.0, 1.0, 1.0):
+                    if mat["mat_emcolor1_r"] == (1.0) and mat["mat_emcolor1_g"] == (1.0) and mat["mat_emcolor1_b"] == (1.0):
                         emcolor1 = (0.0, 0.0, 0.0, 0.0)
+                    if mat["mat_emcolor2_r"] == (1.0) and mat["mat_emcolor2_g"] == (1.0) and mat["mat_emcolor2_b"] == (1.0):
                         emcolor2 = (0.0, 0.0, 0.0, 0.0)
+                    if mat["mat_emcolor3_r"] == (1.0) and mat["mat_emcolor3_g"] == (1.0) and mat["mat_emcolor3_b"] == (1.0):
                         emcolor3 = (0.0, 0.0, 0.0, 0.0)
+                    if mat["mat_emcolor4_r"] == (1.0) and mat["mat_emcolor4_g"] == (1.0) and mat["mat_emcolor4_b"] == (1.0):
                         emcolor4 = (0.0, 0.0, 0.0, 0.0)
                     print(f'Material {mat["mat_name"]}:')
                     print(f"Color 1: {color1}")
@@ -1160,18 +1163,22 @@ def from_trmdl(filep, trmdl, rare, loadlods):
      
                     mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                     mix_color1.blend_type = blend_type
+                    mix_color1.inputs[0].default_value = 0.0
                     mix_color1.inputs[1].default_value = (1, 1, 1, 1)
                     mix_color1.inputs[2].default_value = color1
                     mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color2.inputs[0].default_value = 0.0
                     mix_color2.blend_type = blend_type
                     mix_color2.inputs[1].default_value = (0, 0, 0, 0)
                     mix_color2.inputs[2].default_value = color2
                     mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color3.inputs[0].default_value = 0.0
                     mix_color3.blend_type = blend_type
                     mix_color3.inputs[1].default_value = (0, 0, 0, 0)
                     mix_color3.inputs[2].default_value = color3
                     mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                     mix_color4.blend_type = blend_type
+                    mix_color4.inputs[0].default_value = 0.0
                     mix_color4.inputs[1].default_value = (0, 0, 0, 0)
                     mix_color4.inputs[2].default_value = color4
                     mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
@@ -1198,6 +1205,12 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     mix_emcolor4.blend_type = blend_type
                     mix_emcolor4.inputs[1].default_value = (0, 0, 0, 0)
                     mix_emcolor4.inputs[2].default_value = emcolor4
+                    mix_emcolor5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor5.blend_type = blend_type
+                    mix_emcolor5.inputs[0].default_value = 0.0
+                    mix_emcolor5.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor5.inputs[2].default_value = (1, 1, 1, 1)
+
                     
                     material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
                     material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
@@ -1238,7 +1251,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
 
                     if mat["mat_enable_highlight_map"]:
-                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
                         if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
                             highlight_image_texture.image.colorspace_settings.name = "Non-Color"
@@ -1253,6 +1266,9 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
                         material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
                         material.node_tree.links.new(mix_color5.outputs[0], color_output)
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_emcolor5.inputs[0])
+                        material.node_tree.links.new(mix_emcolor4.outputs[0], mix_emcolor5.inputs[1])
+                        material.node_tree.links.new(mix_emcolor5.outputs[0], principled_bsdf.inputs[19])
                         
                         
                     if mat["mat_enable_normal_map"]:
@@ -1294,12 +1310,12 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                         material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
                         material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
-                        
+                       
                     if mat["mat_enable_ao_map"]:
                         ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
                         if os.path.exists(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension)) == True:            
                             ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension))
-                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB") 
                         mix_color6.blend_type = "MULTIPLY"
                         mix_color6.inputs[0].default_value = 1.0
                         if mix_color5 == True:
@@ -1310,10 +1326,23 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                    
-                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
+                            
+                    if mat["mat_color1_r"] == (1.0) and mat["mat_color1_g"] == (1.0) and mat["mat_color1_b"] == (1.0):
+                        color1 = mix_color1.inputs[0].links[0]
+                        material.node_tree.links.remove(color1)
                         
+                    if mat["mat_color2_r"] == (1.0) and mat["mat_color2_g"] == (1.0) and mat["mat_color2_b"] == (1.0):
+                        color2 = mix_color2.inputs[0].links[0]
+                        material.node_tree.links.remove(color2)                    
+                    
+                    if mat["mat_color3_r"] == (1.0) and mat["mat_color3_g"] == (1.0) and mat["mat_color3_b"] == (1.0):
+                        color3 = mix_color3.inputs[0].links[0]
+                        material.node_tree.links.remove(color3)                    
+                    
+                    if mat["mat_color4_r"] == (1.0) and mat["mat_color4_g"] == (1.0) and mat["mat_color4_b"] == (1.0):
+                        color4 = mix_color4.inputs[0].links[0]
+                        material.node_tree.links.remove(color4)               
+                            
                 else:
                     if mat["mat_enable_base_color_map"]:
                         alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1334,6 +1363,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
                         material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
                         material.node_tree.links.new(mix_color5.outputs[0], color_output)
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_emcolor5.inputs[0])
+                        material.node_tree.links.new(mix_emcolor4.outputs[0], mix_emcolor5.inputs[1])
+                        material.node_tree.links.new(mix_emcolor5.outputs[0], principled_bsdf.inputs[19])
+
 
                     if mat["mat_enable_normal_map"]:
                         normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
