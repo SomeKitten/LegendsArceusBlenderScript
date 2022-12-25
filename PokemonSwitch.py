@@ -290,11 +290,12 @@ def from_trmdl(filep, trmdl, rare, loadlods):
             trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
             bone_count = readlong(trskl)
 
-            new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
-            bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
-            new_collection.objects.link(bone_structure)
-            bpy.context.view_layer.objects.active = bone_structure
-            bpy.ops.object.editmode_toggle()
+            if IN_BLENDER_ENV:
+                new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
+                bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
+                new_collection.objects.link(bone_structure)
+                bpy.context.view_layer.objects.active = bone_structure
+                bpy.ops.object.editmode_toggle()
             
             for x in range(bone_count):
                 bone_offset = ftell(trskl) + readlong(trskl)
@@ -389,29 +390,31 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         mathutils.Euler((bone_rx, bone_ry, bone_rz)),
                         (bone_sx, bone_sy, bone_sz))
 
-                    new_bone = new_armature.edit_bones.new(bone_name)
+                    if IN_BLENDER_ENV:
+                        new_bone = new_armature.edit_bones.new(bone_name)
 
-                    new_bone.use_connect = False
-                    new_bone.use_inherit_rotation = True
-                    new_bone.use_inherit_scale = True
-                    new_bone.use_local_location = True
+                        new_bone.use_connect = False
+                        new_bone.use_inherit_rotation = True
+                        new_bone.use_inherit_scale = True
+                        new_bone.use_local_location = True
 
-                    new_bone.head = (0, 0, 0)
-                    new_bone.tail = (0, 0, 0.1)
-                    new_bone.matrix = bone_matrix
+                        new_bone.head = (0, 0, 0)
+                        new_bone.tail = (0, 0, 0.1)
+                        new_bone.matrix = bone_matrix
 
-                    if bone_parent != 0:
-                        new_bone.parent = bone_array[bone_parent]
-                        new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
+                        if bone_parent != 0:
+                            new_bone.parent = bone_array[bone_parent]
+                            new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
 
-                    if bone_name in bone_rig_array:
-                        bone_id_map[bone_rig_array.index(bone_name)] = bone_name
-                    else:
-                        print(f"Bone {bone_name} not found in bone rig array!")
-                    bone_array.append(new_bone)
+                        if bone_name in bone_rig_array:
+                            bone_id_map[bone_rig_array.index(bone_name)] = bone_name
+                        else:
+                            print(f"Bone {bone_name} not found in bone rig array!")
+                        bone_array.append(new_bone)
                 fseek(trskl, bone_ret)
         fclose(trskl)
-        bpy.ops.object.editmode_toggle()
+        if IN_BLENDER_ENV:
+            bpy.ops.object.editmode_toggle()
     
     if trmtr is not None:
         print("Parsing TRMTR...")
@@ -1506,9 +1509,9 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             w1_array = []
                             weight_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
-                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"
+                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
-                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"
+                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"; svunk_fmt = "None"
 
                             poly_group_offset = ftell(trmsh) + readlong(trmsh)
                             poly_group_ret = ftell(trmsh)
@@ -1714,6 +1717,11 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                     raise AssertionError("Unexpected bitangents format!")
 
                                                 bitangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                            elif vert_buff_param_layer == 2:
+                                                if vert_buff_param_format != 0x2B:
+                                                    raise AssertionError("Unexpected tritangents format!")
+
+                                                tritangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
                                             else:
                                                 raise AssertionError("Unexpected tangents layer!")
                                         elif vert_buff_param_type == 0x05:
@@ -1770,6 +1778,14 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                 raise AssertionError("Unexpected weights format!")
 
                                             weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                        elif vert_buff_param_type == 0x09:
+                                            if vert_buff_param_layer != 0:
+                                                raise AssertionError("Unexpected ?????? layer!")
+
+                                            if vert_buff_param_format != 0x24:
+                                                raise AssertionError("Unexpected ?????? layer!")
+
+                                            svunk_fmt = "1Long?"; vert_buffer_stride = vert_buffer_stride + 0x04
                                         else:
                                             raise AssertionError("Unknown vertex type!")
 
@@ -1785,6 +1801,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                     "normals_fmt": normals_fmt,
                                     "tangents_fmt": tangents_fmt,
                                     "bitangents_fmt": bitangents_fmt,
+                                    "tritangents_fmt":tritangents_fmt,
                                     "uvs_fmt": uvs_fmt,
                                     "uvs2_fmt": uvs2_fmt,
                                     "uvs3_fmt": uvs3_fmt,
@@ -1792,7 +1809,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                     "colors_fmt": colors_fmt,
                                     "colors2_fmt": colors2_fmt,
                                     "bones_fmt": bones_fmt,
-                                    "weights_fmt": weights_fmt
+                                    "weights_fmt": weights_fmt,
+                                    "svunk_fmt":svunk_fmt
                                 }
                             )
                             fseek(trmsh, poly_group_ret)
@@ -1816,7 +1834,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
-                                    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    if y == 0:
+                                        print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    else:
+                                        print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
 
@@ -1829,163 +1850,200 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                         fseek(trmbf, vert_buffer_sub_offset + vert_buffer_sub_struct_ptr)
                                         vert_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, vert_buffer_start)
                                         vert_buffer_byte_count = readlong(trmbf)
-                                        print(f"Vertex buffer {x} start: {hex(ftell(trmbf))}")
+                                        if y == 0:
+                                            print(f"Vertex buffer {x} start: {hex(ftell(trmbf))}")
 
-                                        for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
-                                            if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
-                                                vx = readhalffloat(trmbf)
-                                                vy = readhalffloat(trmbf)
-                                                vz = readhalffloat(trmbf)
-                                                vq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["positions_fmt"] == "3Floats":
-                                                vx = readfloat(trmbf)
-                                                vy = readfloat(trmbf)
-                                                vz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown positions type!")
+                                            for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
+                                                if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
+                                                    vx = readhalffloat(trmbf)
+                                                    vy = readhalffloat(trmbf)
+                                                    vz = readhalffloat(trmbf)
+                                                    vq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["positions_fmt"] == "3Floats":
+                                                    vx = readfloat(trmbf)
+                                                    vy = readfloat(trmbf)
+                                                    vz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown positions type!")
 
-                                            if poly_group_array[x]["normals_fmt"] == "4HalfFloats":
+                                                if poly_group_array[x]["normals_fmt"] == "4HalfFloats":
+                                                    nx = readhalffloat(trmbf)
+                                                    ny = readhalffloat(trmbf)
+                                                    nz = readhalffloat(trmbf)
+                                                    nq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["normals_fmt"] == "3Floats":
+                                                    nx = readfloat(trmbf)
+                                                    ny = readfloat(trmbf)
+                                                    nz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown normals type!")
+
+                                                if poly_group_array[x]["tangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["tangents_fmt"] == "4HalfFloats":
+                                                    tanx = readhalffloat(trmbf)
+                                                    tany = readhalffloat(trmbf)
+                                                    tanz = readhalffloat(trmbf)
+                                                    tanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["tangents_fmt"] == "3Floats":
+                                                    tanx = readfloat(trmbf)
+                                                    tany = readfloat(trmbf)
+                                                    tanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown tangents type!")
+
+                                                if poly_group_array[x]["bitangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["bitangents_fmt"] == "4HalfFloats":
+                                                    bitanx = readhalffloat(trmbf)
+                                                    bitany = readhalffloat(trmbf)
+                                                    bitanz = readhalffloat(trmbf)
+                                                    bitanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["bitangents_fmt"] == "3Floats":
+                                                    bitanx = readfloat(trmbf)
+                                                    bitany = readfloat(trmbf)
+                                                    bitanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bitangents type!")
+
+                                                if poly_group_array[x]["tritangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["tritangents_fmt"] == "4HalfFloats":
+                                                    tritanx = readhalffloat(trmbf)
+                                                    tritany = readhalffloat(trmbf)
+                                                    tritanz = readhalffloat(trmbf)
+                                                    tritanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["tritangents_fmt"] == "3Floats":
+                                                    tritanx = readfloat(trmbf)
+                                                    tritany = readfloat(trmbf)
+                                                    tritanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bitangents type!")
+
+                                                if poly_group_array[x]["uvs_fmt"] == "None":
+                                                    tu = 0
+                                                    tv = 0
+                                                elif poly_group_array[x]["uvs_fmt"] == "2Floats":
+                                                    tu = readfloat(trmbf)
+                                                    tv = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown uvs type!")
+
+                                                if poly_group_array[x]["uvs2_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs2_fmt"] == "2Floats":
+                                                    tu2 = readfloat(trmbf)
+                                                    tv2 = readfloat(trmbf)
+                                                    uv2_array.append((tu2, tv2))
+                                                else:
+                                                    raise AssertionError("Unknown uvs2 type!")
+
+                                                if poly_group_array[x]["uvs3_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs3_fmt"] == "2Floats":
+                                                    tu3 = readfloat(trmbf)
+                                                    tv3 = readfloat(trmbf)
+                                                    uv3_array.append((tu3, tv3))
+                                                else:
+                                                    raise AssertionError("Unknown uvs3 type!")
+
+                                                if poly_group_array[x]["uvs4_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs4_fmt"] == "2Floats":
+                                                    tu4 = readfloat(trmbf)
+                                                    tv4 = readfloat(trmbf)
+                                                    uv4_array.append((tu4, tv4))
+                                                else:
+                                                    raise AssertionError("Unknown uvs4 type!")
+
+                                                if poly_group_array[x]["colors_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
+                                                    colorr = readbyte(trmbf)
+                                                    colorg = readbyte(trmbf)
+                                                    colorb = readbyte(trmbf)
+                                                    colora = readbyte(trmbf)
+                                                elif poly_group_array[x]["colors_fmt"] == "4Floats":
+                                                    colorr = readfloat(trmbf) * 255
+                                                    colorg = readfloat(trmbf) * 255
+                                                    colorb = readfloat(trmbf) * 255
+                                                    colora = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown colors type!")
+
+                                                if poly_group_array[x]["colors2_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
+                                                    colorr2 = readbyte(trmbf)
+                                                    colorg2 = readbyte(trmbf)
+                                                    colorb2 = readbyte(trmbf)
+                                                    colora2 = readbyte(trmbf)
+                                                elif poly_group_array[x]["colors2_fmt"] == "4Floats":
+                                                    colorr2 = readfloat(trmbf) * 255
+                                                    colorg2 = readfloat(trmbf) * 255
+                                                    colorb2 = readfloat(trmbf) * 255
+                                                    colora2 = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown colors 2 type!")
+
+                                                if poly_group_array[x]["bones_fmt"] == "None":
+                                                    bone1 = 0
+                                                    bone2 = 0
+                                                    bone3 = 0
+                                                    bone4 = 0
+                                                elif poly_group_array[x]["bones_fmt"] == "4Bytes":
+                                                    bone1 = readbyte(trmbf)
+                                                    bone2 = readbyte(trmbf)
+                                                    bone3 = readbyte(trmbf)
+                                                    bone4 = readbyte(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bones type!")
+
+                                                if poly_group_array[x]["weights_fmt"] == "None":
+                                                    weight1 = 0
+                                                    weight2 = 0
+                                                    weight3 = 0
+                                                    weight4 = 0
+                                                elif poly_group_array[x]["weights_fmt"] == "4ShortsAsFloat":
+                                                    weight1 = readshort(trmbf) / 65535
+                                                    weight2 = readshort(trmbf) / 65535
+                                                    weight3 = readshort(trmbf) / 65535
+                                                    weight4 = readshort(trmbf) / 65535
+                                                else:
+                                                    raise AssertionError("Unknown weights type!")
+
+                                                vert_array.append((vx, vy, vz))
+                                                normal_array.append((nx, ny, nz))
+                                                # color_array.append((colorr, colorg, colorb))
+                                                # alpha_array.append(colora)
+                                                uv_array.append((tu, tv))
+                                                if trskl is not None:
+                                                    w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
+                                                    b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
+
+                                            print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                        else:
+                                            print(f"Vertex buffer {x} morph {y} start: {hex(ftell(trmbf))}")
+                                            #MorphVert_array = #()
+                                            #MorphNormal_array = #()
+                                            for v in range(int(vert_buffer_byte_count / 0x1C)):
+                                                #Morphs always seem to use this setup.
+                                                vx = readlong(trmbf)
+                                                vy = readlong(trmbf)
+                                                vz = readlong(trmbf)
                                                 nx = readhalffloat(trmbf)
                                                 ny = readhalffloat(trmbf)
                                                 nz = readhalffloat(trmbf)
                                                 nq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["normals_fmt"] == "3Floats":
-                                                nx = readfloat(trmbf)
-                                                ny = readfloat(trmbf)
-                                                nz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown normals type!")
-
-                                            if poly_group_array[x]["tangents_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["tangents_fmt"] == "4HalfFloats":
                                                 tanx = readhalffloat(trmbf)
                                                 tany = readhalffloat(trmbf)
                                                 tanz = readhalffloat(trmbf)
                                                 tanq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["tangents_fmt"] == "3Floats":
-                                                tanx = readfloat(trmbf)
-                                                tany = readfloat(trmbf)
-                                                tanz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown tangents type!")
-
-                                            if poly_group_array[x]["bitangents_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["bitangents_fmt"] == "4HalfFloats":
-                                                bitanx = readhalffloat(trmbf)
-                                                bitany = readhalffloat(trmbf)
-                                                bitanz = readhalffloat(trmbf)
-                                                bitanq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["bitangents_fmt"] == "3Floats":
-                                                bitanx = readfloat(trmbf)
-                                                bitany = readfloat(trmbf)
-                                                bitanz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown bitangents type!")
-
-                                            if poly_group_array[x]["uvs_fmt"] == "None":
-                                                tu = 0
-                                                tv = 0
-                                            elif poly_group_array[x]["uvs_fmt"] == "2Floats":
-                                                tu = readfloat(trmbf)
-                                                tv = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown uvs type!")
-
-                                            if poly_group_array[x]["uvs2_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs2_fmt"] == "2Floats":
-                                                tu2 = readfloat(trmbf)
-                                                tv2 = readfloat(trmbf)
-                                                uv2_array.append((tu2, tv2))
-                                            else:
-                                                raise AssertionError("Unknown uvs2 type!")
-
-                                            if poly_group_array[x]["uvs3_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs3_fmt"] == "2Floats":
-                                                tu3 = readfloat(trmbf)
-                                                tv3 = readfloat(trmbf)
-                                                uv3_array.append((tu3, tv3))
-                                            else:
-                                                raise AssertionError("Unknown uvs3 type!")
-
-                                            if poly_group_array[x]["uvs4_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs4_fmt"] == "2Floats":
-                                                tu4 = readfloat(trmbf)
-                                                tv4 = readfloat(trmbf)
-                                                uv4_array.append((tu4, tv4))
-                                            else:
-                                                raise AssertionError("Unknown uvs4 type!")
-
-                                            if poly_group_array[x]["colors_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
-                                                colorr = readbyte(trmbf)
-                                                colorg = readbyte(trmbf)
-                                                colorb = readbyte(trmbf)
-                                                colora = readbyte(trmbf)
-                                            elif poly_group_array[x]["colors_fmt"] == "4Floats":
-                                                colorr = readfloat(trmbf) * 255
-                                                colorg = readfloat(trmbf) * 255
-                                                colorb = readfloat(trmbf) * 255
-                                                colora = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown colors type!")
-
-                                            if poly_group_array[x]["colors2_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
-                                                colorr2 = readbyte(trmbf)
-                                                colorg2 = readbyte(trmbf)
-                                                colorb2 = readbyte(trmbf)
-                                                colora2 = readbyte(trmbf)
-                                            elif poly_group_array[x]["colors2_fmt"] == "4Floats":
-                                                colorr2 = readfloat(trmbf) * 255
-                                                colorg2 = readfloat(trmbf) * 255
-                                                colorb2 = readfloat(trmbf) * 255
-                                                colora2 = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown colors 2 type!")
-
-                                            if poly_group_array[x]["bones_fmt"] == "None":
-                                                bone1 = 0
-                                                bone2 = 0
-                                                bone3 = 0
-                                                bone4 = 0
-                                            elif poly_group_array[x]["bones_fmt"] == "4Bytes":
-                                                bone1 = readbyte(trmbf)
-                                                bone2 = readbyte(trmbf)
-                                                bone3 = readbyte(trmbf)
-                                                bone4 = readbyte(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown bones type!")
-
-                                            if poly_group_array[x]["weights_fmt"] == "None":
-                                                weight1 = 0
-                                                weight2 = 0
-                                                weight3 = 0
-                                                weight4 = 0
-                                            elif poly_group_array[x]["weights_fmt"] == "4ShortsAsFloat":
-                                                weight1 = readshort(trmbf) / 65535
-                                                weight2 = readshort(trmbf) / 65535
-                                                weight3 = readshort(trmbf) / 65535
-                                                weight4 = readshort(trmbf) / 65535
-                                            else:
-                                                raise AssertionError("Unknown weights type!")
-
-                                            vert_array.append((vx, vy, vz))
-                                            normal_array.append((nx, ny, nz))
-                                            # color_array.append((colorr, colorg, colorb))
-                                            # alpha_array.append(colora)
-                                            uv_array.append((tu, tv))
-                                            if trskl is not None:
-                                                w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
-                                                b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
-
-                                            # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                                #append MorphVert_array [vx,vy,vz]
+                                                #append MorphNormal_array [nx,ny,nz]
+                                            print(f"Vertex buffer {x} morph {y} end: {hex(ftell(trmbf))}")
+                                            #TODO: Continue implementing after line 3814
+                                    fseek(trmbf,vert_buffer_sub_ret)
 
                             if vert_buffer_struct_ptr_faces != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
