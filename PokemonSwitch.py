@@ -97,7 +97,7 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdl(directory, f, self.rare, self.loadlods)
+                from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
                 f.close()
             return {'FINISHED'}
 
