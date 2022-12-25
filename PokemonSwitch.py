@@ -1261,6 +1261,12 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
                             highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
                             highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
                         else:
                             print("No Highlight")
                         material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
