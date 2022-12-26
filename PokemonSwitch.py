@@ -2105,6 +2105,14 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
+                                if len(MorphName_array) > 0:
+                                    sk_basis = new_object.shape_key_add(name='Basis')
+                                    sk_basis.interpolation = 'KEY_LINEAR'
+                                    new_object.data.shape_keys.use_relative = True
+                                    for m in range(len(MorphName_array)):
+                                        sk = new_object.shape_key_add(name=MorphName_array[m])
+                                        for i in range(len(Morphs_array[m])):
+                                            sk.data[i].co = Morphs_array[m][i]
 
                                 if bone_structure != None:
                                     new_object.parent = bone_structure
