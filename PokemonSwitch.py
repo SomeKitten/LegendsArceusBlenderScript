@@ -1467,6 +1467,8 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             b1_array = []
                             w1_array = []
                             weight_array = []
+                            Morphs_array = []
+                            MorphName_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
@@ -1493,7 +1495,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             poly_group_struct_ptr_unk_e = readshort(trmsh)
                             poly_group_struct_ptr_unk_float = readshort(trmsh)
                             poly_group_struct_ptr_unk_g = readshort(trmsh)
-                            poly_group_struct_ptr_unk_h = readshort(trmsh)
+                            poly_group_struct_ptr_Morph_Name = readshort(trmsh)
                             poly_group_struct_ptr_vis_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
@@ -1567,6 +1569,32 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 vis_group_name = readfixedstring(trmsh, vis_group_name_len)
                                 # changed the output variable because the original seems to be a typo
                                 print(f"VisGroup: {vis_group_name}")
+                            if poly_group_struct_ptr_Morph_Name !=0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_Morph_Name)
+                                morph_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, morph_name_header_offset)
+                                morph_name_count = readlong(trmsh)
+                                for m in range(morph_name_count):
+                                    morph_name_header_offset = ftell (trmsh) + readlong (trmsh)
+                                    morph_ret = ftell (trmsh)
+                                    fseek (trmsh, morph_name_header_offset)
+                                    morph_name_struct = ftell (trmsh) - readlong (trmsh)
+                                    fseek (trmsh, morph_name_struct)
+                                    morph_name_struct_len = readshort (trmsh)
+                                    if morph_name_struct_len == 0x0008:
+                                        morph_name_struct_section_len = readshort (trmsh)
+                                        morph_name_struct_ptr_ID = readshort (trmsh)
+                                        morph_name_struct_ptr_name = readshort (trmsh)
+                                    else:
+                                        raise AssertionError("Unexpected morph name struct length!")
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_ID)
+                                    morph_name_ID = readlong (trmsh)
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_name)
+                                    morph_name_start = ftell (trmsh) + readlong (trmsh)
+                                    fseek (trmsh, morph_name_start)
+                                    morph_name_len = readlong (trmsh)
+                                    morph_name = readfixedstring (trmsh, morph_name_len)
+                                    MorphName_array.append(morph_name)
+                                    fseek (trmsh, morph_ret)
                             if poly_group_struct_ptr_vert_buff != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vert_buff)
                                 poly_group_vert_buff_offset = ftell(trmsh) + readlong(trmsh)
@@ -1983,13 +2011,13 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                             print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
                                         else:
                                             print(f"Vertex buffer {x} morph {y} start: {hex(ftell(trmbf))}")
-                                            #MorphVert_array = #()
-                                            #MorphNormal_array = #()
+                                            MorphVert_array = []
+                                            MorphNormal_array = []
                                             for v in range(int(vert_buffer_byte_count / 0x1C)):
                                                 #Morphs always seem to use this setup.
-                                                vx = readlong(trmbf)
-                                                vy = readlong(trmbf)
-                                                vz = readlong(trmbf)
+                                                vx = readfloat(trmbf)
+                                                vy = readfloat(trmbf)
+                                                vz = readfloat(trmbf)
                                                 nx = readhalffloat(trmbf)
                                                 ny = readhalffloat(trmbf)
                                                 nz = readhalffloat(trmbf)
@@ -1998,9 +2026,10 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                 tany = readhalffloat(trmbf)
                                                 tanz = readhalffloat(trmbf)
                                                 tanq = readhalffloat(trmbf)
-                                                #append MorphVert_array [vx,vy,vz]
-                                                #append MorphNormal_array [nx,ny,nz]
+                                                MorphVert_array.append((vx, vy, vz))
+                                                MorphNormal_array.append((nx, ny, nz))
                                             print(f"Vertex buffer {x} morph {y} end: {hex(ftell(trmbf))}")
+                                            Morphs_array.append(MorphVert_array)
                                             #TODO: Continue implementing after line 3814
                                     fseek(trmbf,vert_buffer_sub_ret)
 
@@ -2076,6 +2105,14 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
+                                if len(MorphName_array) > 0:
+                                    sk_basis = new_object.shape_key_add(name='Basis')
+                                    sk_basis.interpolation = 'KEY_LINEAR'
+                                    new_object.data.shape_keys.use_relative = True
+                                    for m in range(len(MorphName_array)):
+                                        sk = new_object.shape_key_add(name=MorphName_array[m])
+                                        for i in range(len(Morphs_array[m])):
+                                            sk.data[i].co = Morphs_array[m][i]
 
                                 if bone_structure != None:
                                     new_object.parent = bone_structure
