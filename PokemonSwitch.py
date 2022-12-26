@@ -1987,9 +1987,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                             #MorphNormal_array = #()
                                             for v in range(int(vert_buffer_byte_count / 0x1C)):
                                                 #Morphs always seem to use this setup.
-                                                vx = readlong(trmbf)
-                                                vy = readlong(trmbf)
-                                                vz = readlong(trmbf)
+                                                vx = readfloat(trmbf)
+                                                vy = readfloat(trmbf)
+                                                vz = readfloat(trmbf)
                                                 nx = readhalffloat(trmbf)
                                                 ny = readhalffloat(trmbf)
                                                 nz = readhalffloat(trmbf)
