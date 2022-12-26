@@ -1998,6 +1998,13 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                     weight4 = readshort(trmbf) / 65535
                                                 else:
                                                     raise AssertionError("Unknown weights type!")
+                                                
+                                                if poly_group_array[x]["svunk_fmt"] == "None":
+                                                    SVUnk = 0
+                                                elif poly_group_array[x]["svunk_fmt"] == "1Long?":
+                                                    SVUnk = readlong(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown ?????? type!")
 
                                                 vert_array.append((vx, vy, vz))
                                                 normal_array.append((nx, ny, nz))
