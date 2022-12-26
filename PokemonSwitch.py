@@ -1467,6 +1467,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             b1_array = []
                             w1_array = []
                             weight_array = []
+                            Morphs_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
@@ -1983,8 +1984,8 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                             print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
                                         else:
                                             print(f"Vertex buffer {x} morph {y} start: {hex(ftell(trmbf))}")
-                                            #MorphVert_array = #()
-                                            #MorphNormal_array = #()
+                                            MorphVert_array = []
+                                            MorphNormal_array = []
                                             for v in range(int(vert_buffer_byte_count / 0x1C)):
                                                 #Morphs always seem to use this setup.
                                                 vx = readfloat(trmbf)
@@ -1998,9 +1999,10 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                 tany = readhalffloat(trmbf)
                                                 tanz = readhalffloat(trmbf)
                                                 tanq = readhalffloat(trmbf)
-                                                #append MorphVert_array [vx,vy,vz]
-                                                #append MorphNormal_array [nx,ny,nz]
+                                                MorphVert_array.append((vx, vy, vz))
+                                                MorphNormal_array.append((nx, ny, nz))
                                             print(f"Vertex buffer {x} morph {y} end: {hex(ftell(trmbf))}")
+                                            Morphs_array.append(MorphVert_array)
                                             #TODO: Continue implementing after line 3814
                                     fseek(trmbf,vert_buffer_sub_ret)
 
