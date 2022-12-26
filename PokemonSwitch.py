@@ -1468,6 +1468,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             w1_array = []
                             weight_array = []
                             Morphs_array = []
+                            MorphName_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
@@ -1494,7 +1495,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             poly_group_struct_ptr_unk_e = readshort(trmsh)
                             poly_group_struct_ptr_unk_float = readshort(trmsh)
                             poly_group_struct_ptr_unk_g = readshort(trmsh)
-                            poly_group_struct_ptr_unk_h = readshort(trmsh)
+                            poly_group_struct_ptr_Morph_Name = readshort(trmsh)
                             poly_group_struct_ptr_vis_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
@@ -1568,6 +1569,32 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 vis_group_name = readfixedstring(trmsh, vis_group_name_len)
                                 # changed the output variable because the original seems to be a typo
                                 print(f"VisGroup: {vis_group_name}")
+                            if poly_group_struct_ptr_Morph_Name !=0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_Morph_Name)
+                                morph_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, morph_name_header_offset)
+                                morph_name_count = readlong(trmsh)
+                                for m in range(morph_name_count):
+                                    morph_name_header_offset = ftell (trmsh) + readlong (trmsh)
+                                    morph_ret = ftell (trmsh)
+                                    fseek (trmsh, morph_name_header_offset)
+                                    morph_name_struct = ftell (trmsh) - readlong (trmsh)
+                                    fseek (trmsh, morph_name_struct)
+                                    morph_name_struct_len = readshort (trmsh)
+                                    if morph_name_struct_len == 0x0008:
+                                        morph_name_struct_section_len = readshort (trmsh)
+                                        morph_name_struct_ptr_ID = readshort (trmsh)
+                                        morph_name_struct_ptr_name = readshort (trmsh)
+                                    else:
+                                        raise AssertionError("Unexpected morph name struct length!")
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_ID)
+                                    morph_name_ID = readlong (trmsh)
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_name)
+                                    morph_name_start = ftell (trmsh) + readlong (trmsh)
+                                    fseek (trmsh, morph_name_start)
+                                    morph_name_len = readlong (trmsh)
+                                    morph_name = readfixedstring (trmsh, morph_name_len)
+                                    MorphName_array.append(morph_name)
+                                    fseek (trmsh, morph_ret)
                             if poly_group_struct_ptr_vert_buff != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vert_buff)
                                 poly_group_vert_buff_offset = ftell(trmsh) + readlong(trmsh)
