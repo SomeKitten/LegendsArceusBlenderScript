@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Pokémon Switch V2 (.TRMDL)",
-    "author": "Scarlett/SomeKitten & ElChicoEevee",
+    "author": "Scarlett/SomeKitten & ElChicoEevee & Terasol",
     "version": (0, 0, 2),
     "blender": (3, 3, 0),
     "location": "File > Import",
@@ -257,8 +257,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
 
     # TODO create bone_rig_array
     # LINE 1247
-    if chara_check == "Rei" or chara_check == "Akari":
-        trskl = trskl = open(os.path.join(filep, "p0_base.trskl"), "rb")
+    
     
     if trskl is not None:
         print("Parsing TRSKL...")
@@ -347,6 +346,80 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                         print(f"BoneMerge to {bone_merge_string}")
                     else: bone_merge_string = ""
 
+                if chara_check == "Rei" or chara_check == "Akari":
+                    bone_array.append("foot_base")
+                    bone_array.append("waist")
+                    bone_array.append("spine_01")
+                    bone_array.append("spine_02")
+                    bone_array.append("spine_03")
+                    bone_array.append("neck")
+                    bone_array.append("look")
+                    bone_array.append("head")
+                    bone_array.append("left_shoulder")
+                    bone_array.append("left_arm_width")
+                    bone_array.append("left_arm_01")
+                    bone_array.append("left_arm_02")
+                    bone_array.append("left_hand")
+                    bone_array.append("left_thumb_01")
+                    bone_array.append("left_thumb_02")
+                    bone_array.append("left_thumb_03")
+                    bone_array.append("left_index_01")
+                    bone_array.append("left_index_02")
+                    bone_array.append("left_index_03")
+                    bone_array.append("left_middle_01")
+                    bone_array.append("left_middle_02")
+                    bone_array.append("left_middle_03")
+                    bone_array.append("left_ring_01")
+                    bone_array.append("left_ring_02")
+                    bone_array.append("left_ring_03")
+                    bone_array.append("left_pinky_01")
+                    bone_array.append("left_pinky_02")
+                    bone_array.append("left_pinky_03")
+                    bone_array.append("left_attach_off")
+                    bone_array.append("left_attach_on")
+                    bone_array.append("left_hand_roll")
+                    bone_array.append("left_arm_02_sub")
+                    bone_array.append("left_arm_02_roll")
+                    bone_array.append("left_arm_01_roll")
+                    bone_array.append("right_shoulder")
+                    bone_array.append("right_arm_width")
+                    bone_array.append("right_arm_01")
+                    bone_array.append("right_arm_02")
+                    bone_array.append("right_hand")
+                    bone_array.append("right_thumb_01")
+                    bone_array.append("right_thumb_02")
+                    bone_array.append("right_thumb_03")
+                    bone_array.append("right_index_01")
+                    bone_array.append("right_index_02")
+                    bone_array.append("right_index_03")
+                    bone_array.append("right_middle_01")
+                    bone_array.append("right_middle_02")
+                    bone_array.append("right_middle_03")
+                    bone_array.append("right_ring_01")
+                    bone_array.append("right_ring_02")
+                    bone_array.append("right_ring_03")
+                    bone_array.append("right_pinky_01")
+                    bone_array.append("right_pinky_02")
+                    bone_array.append("right_pinky_03")
+                    bone_array.append("right_attach_off")
+                    bone_array.append("right_attach_on")
+                    bone_array.append("right_hand_roll")
+                    bone_array.append("right_arm_02_sub")
+                    bone_array.append("right_arm_02_roll")
+                    bone_array.append("right_arm_01_roll")
+                    bone_array.append("hips")
+                    bone_array.append("leg_width")
+                    bone_array.append("left_leg_01")
+                    bone_array.append("left_leg_02")
+                    bone_array.append("left_foot")
+                    bone_array.append("left_toe")
+                    bone_array.append("left_leg_02_sub")
+                    bone_array.append("right_leg_01")
+                    bone_array.append("right_leg_02")
+                    bone_array.append("right_foot")
+                    bone_array.append("right_toe")
+                    bone_array.append("right_leg_02_sub")
+
                 if trskl_bone_struct_ptr_bone != 0:
                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
                     bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
@@ -411,7 +484,9 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                         if bone_name in bone_rig_array:
                             bone_id_map[bone_rig_array.index(bone_name)] = bone_name
                         else:
-                            print(f"Bone {bone_name} not found in bone rig array!")
+                            bone_rig_array.append(bone_name)
+                            bone_id_map[len(bone_rig_array) - 1] = bone_name
+                        
                         bone_array.append(new_bone)
                 fseek(trskl, bone_ret)
         fclose(trskl)
@@ -1469,6 +1544,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             weight_array = []
                             Morphs_array = []
                             MorphName_array = []
+                            groupoffset_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
@@ -1483,20 +1559,38 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             poly_group_struct_len = readshort(trmsh)
 
 
-                            poly_group_struct_section_len = readshort(trmsh)
-                            poly_group_struct_ptr_poly_group_name = readshort(trmsh)
-                            poly_group_struct_ptr_bbbox = readshort(trmsh)
-                            poly_group_struct_ptp_unc_a = readshort(trmsh)
-                            poly_group_struct_ptr_vert_buff = readshort(trmsh)
-                            poly_group_struct_ptr_mat_list = readshort(trmsh)
-                            poly_group_struct_ptr_unk_b = readshort(trmsh)
-                            poly_group_struct_ptr_unk_c = readshort(trmsh)
-                            poly_group_struct_ptr_unk_d = readshort(trmsh)
-                            poly_group_struct_ptr_unk_e = readshort(trmsh)
-                            poly_group_struct_ptr_unk_float = readshort(trmsh)
-                            poly_group_struct_ptr_unk_g = readshort(trmsh)
-                            poly_group_struct_ptr_Morph_Name = readshort(trmsh)
-                            poly_group_struct_ptr_vis_group_name = readshort(trmsh)
+                            if poly_group_struct_len == 0x001E:
+                                poly_group_struct_section_len = readshort(trmsh)
+                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
+                                poly_group_struct_ptr_bbbox = readshort(trmsh)
+                                poly_group_struct_ptp_unc_a = readshort(trmsh)
+                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
+                                poly_group_struct_ptr_mat_list = readshort(trmsh)
+                                poly_group_struct_ptr_unk_b = readshort(trmsh)
+                                poly_group_struct_ptr_unk_c = readshort(trmsh)
+                                poly_group_struct_ptr_unk_d = readshort(trmsh)
+                                poly_group_struct_ptr_unk_e = readshort(trmsh)
+                                poly_group_struct_ptr_unk_float = readshort(trmsh)
+                                poly_group_struct_ptr_unk_g = readshort(trmsh)
+                                poly_group_struct_ptr_unk_h = readshort(trmsh)
+                                poly_group_struct_ptr_vis_group_name = readshort(trmsh)
+                            elif poly_group_struct_len == 0x0022:
+                                poly_group_struct_section_len = readshort(trmsh)
+                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
+                                poly_group_struct_ptr_bbbox = readshort(trmsh)
+                                poly_group_struct_ptp_unc_a = readshort(trmsh)
+                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
+                                poly_group_struct_ptr_mat_list = readshort(trmsh)
+                                poly_group_struct_ptr_unk_b = readshort(trmsh)
+                                poly_group_struct_ptr_unk_c = readshort(trmsh)
+                                poly_group_struct_ptr_unk_d = readshort(trmsh)
+                                poly_group_struct_ptr_unk_e = readshort(trmsh)
+                                poly_group_struct_ptr_unk_float = readshort(trmsh)
+                                poly_group_struct_ptr_unk_g = readshort(trmsh)
+                                poly_group_struct_ptr_morphname = readshort (trmsh)
+                                poly_group_struct_ptr_unk_vis_group_name = readshort (trmsh)
+                                poly_group_struct_ptr_unk_h = readshort(trmsh)
+                                poly_group_struct_ptr_vis_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_mat_list)
@@ -1562,15 +1656,24 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 poly_group_name_len = readlong(trmsh)
                                 poly_group_name = readfixedstring(trmsh, poly_group_name_len)
                                 print(f"Building {poly_group_name}...")
+                                
                             if poly_group_struct_ptr_vis_group_name != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vis_group_name)
+                                group_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, group_name_header_offset)
+                                group_name_count = readlong(trmsh)
+                                for g in range(group_name_count):
+                                    group_name_offset = ftell(trmsh) + readlong(trmsh)
+                                    groupoffset_array.append(group_name_offset)
+                                    
+                            if poly_group_struct_ptr_unk_vis_group_name != 0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_unk_vis_group_name)
                                 vis_group_name_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, vis_group_name_offset)
                                 vis_group_name_len = readlong(trmsh)
                                 vis_group_name = readfixedstring(trmsh, vis_group_name_len)
                                 # changed the output variable because the original seems to be a typo
                                 print(f"VisGroup: {vis_group_name}")
-                            if poly_group_struct_ptr_Morph_Name !=0:
-                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_Morph_Name)
+                            if poly_group_struct_ptr_morphname !=0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_morphname)
                                 morph_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, morph_name_header_offset)
                                 morph_name_count = readlong(trmsh)
                                 for m in range(morph_name_count):
@@ -1808,9 +1911,58 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                             vert_buffer_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_struct)
                             vert_buffer_struct_len = readshort(trmbf)
 
-                            vert_buffer_struct_section_length = readshort(trmbf)
-                            vert_buffer_struct_ptr_faces = readshort(trmbf)
-                            vert_buffer_struct_ptr_verts = readshort(trmbf)
+                            if vert_buffer_struct_len == 0x0008:
+                                vert_buffer_struct_section_length = readshort(trmbf)
+                                vert_buffer_struct_ptr_faces = readshort(trmbf)
+                                vert_buffer_struct_ptr_verts = readshort(trmbf)
+                                vert_buffer_struct_ptr_groups = 0
+                            if vert_buffer_struct_len == 0x000A:
+                                vert_buffer_struct_section_length = readshort(trmbf)
+                                vert_buffer_struct_ptr_faces = readshort(trmbf)
+                                vert_buffer_struct_ptr_verts = readshort(trmbf)
+                                vert_buffer_struct_ptr_groups = readshort(trmbf)
+                            else:
+                                raise AssertionError("Unexpected vertex buffer struct length!")
+
+                            if vert_buffer_struct_ptr_faces != 0:
+                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
+                                face_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, face_buffer_start)
+                                face_buffer_count = readlong(trmbf)
+
+                                for y in range(face_buffer_count):
+                                    face_buff_offset = ftell(trmbf) + readlong(trmbf)
+                                    face_buff_ret = ftell(trmbf)
+                                    fseek(trmbf, face_buff_offset)
+                                    print(f"Facepoint {x} header: {hex(ftell(trmbf))}")
+                                    face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
+                                    face_buff_struct_len = readshort(trmbf)
+
+                                    if face_buff_struct_len != 0x0006:
+                                        raise AssertionError("Unexpected face buffer struct length!")
+                                    face_buffer_struct_section_length = readshort(trmbf)
+                                    face_buffer_struct_ptr = readshort(trmbf)
+
+                                    if face_buffer_struct_ptr != 0:
+                                        fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
+                                        facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
+                                        facepoint_byte_count = readlong(trmbf)
+                                        print(f"Facepoint {x} start: {hex(ftell(trmbf))}")
+
+                                        if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
+                                            for v in range(facepoint_byte_count // 12):
+                                                fa = readlong(trmbf)
+                                                fb = readlong(trmbf)
+                                                fc = readlong(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                        else:
+                                            for v in range(facepoint_byte_count // 6):
+                                                fa = readshort(trmbf)
+                                                fb = readshort(trmbf)
+                                                fc = readshort(trmbf)
+                                                face_array.append([fa, fb, fc])
+                                        print(f"Facepoint {x} end: {hex(ftell(trmbf))}")
+                                    fseek(trmbf, face_buff_ret)
+                            
 
                             if vert_buffer_struct_ptr_verts != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_verts)
@@ -2005,7 +2157,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                                     SVUnk = readlong(trmbf)
                                                 else:
                                                     raise AssertionError("Unknown ?????? type!")
-
+                                                
                                                 vert_array.append((vx, vy, vz))
                                                 normal_array.append((nx, ny, nz))
                                                 # color_array.append((colorr, colorg, colorb))
@@ -2040,45 +2192,127 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                             #TODO: Continue implementing after line 3814
                                     fseek(trmbf,vert_buffer_sub_ret)
 
-                            if vert_buffer_struct_ptr_faces != 0:
-                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
-                                face_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, face_buffer_start)
-                                face_buffer_count = readlong(trmbf)
 
-                                for y in range(face_buffer_count):
-                                    face_buff_offset = ftell(trmbf) + readlong(trmbf)
-                                    face_buff_ret = ftell(trmbf)
-                                    fseek(trmbf, face_buff_offset)
-                                    print(f"Facepoint {x} header: {hex(ftell(trmbf))}")
-                                    face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
-                                    face_buff_struct_len = readshort(trmbf)
-
-                                    if face_buff_struct_len != 0x0006:
-                                        raise AssertionError("Unexpected face buffer struct length!")
-                                    face_buffer_struct_section_length = readshort(trmbf)
-                                    face_buffer_struct_ptr = readshort(trmbf)
-
-                                    if face_buffer_struct_ptr != 0:
-                                        fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
-                                        facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
-                                        facepoint_byte_count = readlong(trmbf)
-                                        print(f"Facepoint {x} start: {hex(ftell(trmbf))}")
-
-                                        if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
-                                            for v in range(facepoint_byte_count // 12):
-                                                fa = readlong(trmbf)
-                                                fb = readlong(trmbf)
-                                                fc = readlong(trmbf)
-                                                face_array.append([fa, fb, fc])
+                            if vert_buffer_struct_ptr_groups != 0:
+                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_groups)
+                                group_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, group_start)
+                                group_count = readlong(trmbf)
+                                if group_count > 0:
+                                    MorphNameNext = 1
+                                    for g in range(group_count):
+                                        fseek(trmsh, groupoffset_array[g])
+                                        group_namestruct = ftell(trmsh) - readlong(trmsh)
+                                        fseek(trmsh, group_namestruct)
+                                        groupnamestructlen = readshort(trmsh)
+                                        if groupnamestructlen == 0x000A:
+                                            group_structsectionlen = readshort(trmsh)
+                                            group_structptrparama = readshort(trmsh)
+                                            group_structptrparammorph = readshort(trmsh)
+                                            group_structprtparamname = readshort(trmsh)
                                         else:
-                                            for v in range(facepoint_byte_count // 6):
-                                                fa = readshort(trmbf)
-                                                fb = readshort(trmbf)
-                                                fc = readshort(trmbf)
-                                                face_array.append([fa, fb, fc])
-                                        print(f"Facepoint {x} end: {hex(ftell(trmbf))}")
-                                    fseek(trmbf, face_buff_ret)
-                            fseek(trmbf, vert_buffer_ret)
+                                            raise AssertionError("Unexpected morph group buffer struct length!")
+                                        
+                                        fseek(trmsh, groupoffset_array[g] + group_structprtparamname)
+                                        group_nameoffset = ftell(trmsh) + readlong(trmsh)
+                                        fseek(trmsh, group_nameoffset)
+                                        group_namelen = readlong(trmsh)
+                                        group_name = readfixedstring(trmsh, group_namelen)
+                                        
+                                        
+                                        fseek(trmsh, groupoffset_array[g] + group_structptrparammorph)
+                                        group_morphoffset = ftell(trmsh) + readlong(trmsh)
+                                        fseek(trmsh, group_morphoffset)
+                                        group_morphnamecount = readlong(trmsh)
+                                        for y in range(group_morphnamecount):
+                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
+                                            group_morhpnameret = ftell(trmsh)
+                                            fseek(trmsh, group_morphnameoffset)
+                                            
+                                            group_namemorphstruct = ftell(trmsh) - readlong(trmsh)
+                                            fseek(trmsh, group_namemorphstruct)
+                                            group_namemorphstructlen = readshort(trmsh)
+                                            if group_namemorphstructlen == 0x000A:
+                                                group_namemorphstructsectionlen = readshort(trmsh)
+                                                group_namemorphstructptrparamid = readshort(trmsh)
+                                                group_namemorphstructptrparamname = readshort(trmsh)
+                                                group_namemorphstructptrparamflag = readshort(trmsh)
+                                            else:
+                                                raise AssertionError("Unexpected morph group buffer struct length!")
+                                            fseek(trmsh, group_morphnameoffset + group_namemorphstructptrparamname)
+                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
+                                            fseek(trmsh, group_morphnameoffset)
+                                            group_morphnamelen = readlong(trmsh)
+                                            group_morphname = readfixedstring(trmsh, group_morphnamelen)
+                                            MorphName_array.append(group_morphname)
+                                            fseek(trmsh, group_morhpnameret)
+                                        
+                                        MorphVertIDs_array = []
+                                        group_offset = ftell(trmbf) + readlong(trmbf)
+                                        group_ret = ftell(trmbf)
+                                        fseek(trmbf, group_offset)
+                                        group_struct = ftell(trmbf) - readlong(trmbf)
+                                        fseek(trmbf, group_struct)
+                                        group_structlen = readshort(trmbf)
+                                        if group_structlen == 0x0006:
+                                            group_structsectionlen = readshort(trmbf)
+                                            group_structptrparam = readshort(trmbf)
+                                        else:
+                                            raise AssertionError("Unexpected morph group buffer struct lenght!")
+                                        
+                                        fseek(trmbf, group_offset + group_structptrparam)
+                                        group_morphsoffset = ftell(trmbf) + readlong(trmbf)
+                                        fseek(trmbf, group_morphsoffset)
+                                        group_morphscount = readlong(trmbf)
+                                        print(f"Group {x} header start: {group_morphsoffset}")
+                                        
+                                        for y in range(group_morphscount):
+                                            morphgroupoffset = ftell(trmbf) + readlong(trmbf)
+                                            groupret = ftell(trmbf)
+                                            fseek(trmbf, morphgroupoffset)
+                                            print(f"Group morph {y} start: {ftell(trmbf)}")
+                                            bufferstruct = ftell(trmbf) - readlong(trmbf)
+                                            fseek(trmbf, bufferstruct)
+                                            morphbufferstructlen = readshort(trmbf)
+                                            if morphbufferstructlen == 0x0006:
+                                                morphbuffersectionlen = readshort(trmbf)
+                                                morphbufferstructptrparam = readshort(trmbf)
+                                            else:
+                                                raise AssertionError("Unexpected group sub buffer struct lenght!")
+                                            
+                                            fseek(trmbf, morphgroupoffset + morphbufferstructptrparam)
+                                            morphbuffergroupsuboffset = ftell(trmbf) + readlong(trmbf)
+                                            morphbuffergroupsbytecount = readlong(trmbf)
+                                            if y == 0:
+                                                for v in range(morphbuffergroupsbytecount // 0x04):
+                                                    MorphVertID = readlong(trmbf)
+                                                    MorphVertIDs_array.append(MorphVertID)
+                                            else:
+                                                MorphVert_array = []
+                                                MorphNormal_array = []
+                                                for v in range(len(vert_array)):
+                                                    MorphVert_array.append(vert_array[v])
+                                                    MorphNormal_array.append(normal_array[v])
+                                                for v in range(morphbuffergroupsbytecount // 0x1C):
+                                                    #Morphs always seem to use this setup.
+                                                    vx = readfloat(trmbf)
+                                                    vy = readfloat(trmbf)
+                                                    vz = readfloat(trmbf)
+                                                    nx = readhalffloat(trmbf)
+                                                    ny = readhalffloat(trmbf)
+                                                    nz = readhalffloat(trmbf)
+                                                    nq = readhalffloat(trmbf)
+                                                    tanx = readhalffloat(trmbf)
+                                                    tany = readhalffloat(trmbf)
+                                                    tanz = readhalffloat(trmbf)
+                                                    tanq = readhalffloat(trmbf)
+                                                    if MorphVertIDs_array[v] != 0:
+                                                        MorphVert_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + vx, vert_array[MorphVertIDs_array[v]][1] + vy, vert_array[MorphVertIDs_array[v]][2] + vz]
+                                                        MorphNormal_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + nx, vert_array[MorphVertIDs_array[v]][1] + ny, vert_array[MorphVertIDs_array[v]][2] + nz]
+                                                print(f"Group {x} morph {y} end: {hex(ftell(trmbf))}")
+                                                Morphs_array.append(MorphVert_array)
+                                            fseek(trmbf, groupret)
+                                        fseek(trmbf, group_ret)
+                            fseek(trmbf, vert_buffer_ret)                                                          
 
                             print("Making object...")
 
@@ -2111,11 +2345,14 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                 new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
+                                for p in new_mesh.polygons:
+                                    p.use_smooth = True
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
                                 if len(MorphName_array) > 0:
                                     sk_basis = new_object.shape_key_add(name='Basis')
                                     sk_basis.interpolation = 'KEY_LINEAR'
                                     new_object.data.shape_keys.use_relative = True
+                                    print(MorphName_array)
                                     for m in range(len(MorphName_array)):
                                         sk = new_object.shape_key_add(name=MorphName_array[m])
                                         for i in range(len(Morphs_array[m])):
@@ -2129,18 +2366,21 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                                     for face in new_object.data.polygons:
                                         for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
                                             w = weight_array[vert_idx]
-
                                             for i in range(len(w["boneids"])):
-                                                bone_id = bone_id_map[w['boneids'][i]]
-                                                weight = w['weights'][i]
+                                                try:
+                                                    bone_id = bone_id_map[w['boneids'][i]]
+                                                except:
+                                                    bone_id = None
+                                                if bone_id:
+                                                    weight = w['weights'][i]
 
-                                                group = None
-                                                if new_object.vertex_groups.get(bone_id) == None:
-                                                    group = new_object.vertex_groups.new(name=bone_id)
-                                                else:
-                                                    group = new_object.vertex_groups[bone_id]
+                                                    group = None
+                                                    if new_object.vertex_groups.get(bone_id) == None:
+                                                        group = new_object.vertex_groups.new(name=bone_id)
+                                                    else:
+                                                        group = new_object.vertex_groups[bone_id]
 
-                                                group.add([vert_idx], weight, 'REPLACE')
+                                                    group.add([vert_idx], weight, 'REPLACE')
 
                                 # # vertex colours
                                 # color_layer = new_object.data.vertex_colors.new()
@@ -2206,7 +2446,7 @@ def readshort(file):
 # SIGNED!!!!
 def readlong(file):
     bytes_data = file.read(4)
-    # print(f"readlong: {bytes_data}")
+    #print(f"readlong: {bytes_data}")
     return int.from_bytes(bytes_data, byteorder='little', signed=True)
 
 
@@ -2220,12 +2460,12 @@ def readhalffloat(file):
 
 def readfixedstring(file, length):
     bytes_data = file.read(length)
-    # print(f"readfixedstring ({length}): {bytes_data}")
+    #print(f"readfixedstring ({length}): {bytes_data}")
     return bytes_data.decode('utf-8')
 
 
 def fseek(file, offset):
-    # print(f"Seeking to {offset}")
+    #print(f"Seeking to {offset}")
     file.seek(offset)
 
 
