@@ -1432,7 +1432,7 @@ def from_trmdl(filep, trmdl, rare, loadlods, usedds):
                 if mat["mat_color4_r"] == (1.0) and mat["mat_color4_g"] == (1.0) and mat["mat_color4_b"] == (1.0):
                     color4 = mix_color4.inputs[0].links[0]
                     material.node_tree.links.remove(color4)
-                if 'eyelash' in mat["mat_name"]:
+                if 'eyelash' in mat["mat_name"] and os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == False:
                     material.node_tree.links.remove(principled_bsdf.inputs[0].links[0])
                     color_output.default_value = basecolor
 
