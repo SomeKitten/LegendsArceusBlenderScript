@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Pokémon Switch V2 (.TRMDL)",
-    "author": "Scarlett/SomeKitten & ElChicoEevee & Terasol",
+    "author": "Scarlett/SomeKitten & ElChicoEevee",
     "version": (0, 0, 2),
     "blender": (3, 3, 0),
     "location": "File > Import",
@@ -35,7 +35,7 @@ import sys
 
 
 # READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
-IN_BLENDER_ENV = True
+IN_BLENDER_ENV = False
     
 class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonlegendsarceus"
@@ -64,6 +64,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
+    usedds: BoolProperty(
+            name="Use DDS Textures",
+            description="Uses rare material instead of normal one",
+            default=False,
+            )
     def draw(self, context):
         layout = self.layout
 
@@ -76,13 +81,15 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
         box = layout.box()
         box.prop(self, 'loadlods')
         
+        box = layout.box()
+        box.prop(self, 'usedds')
         
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
             f = open(os.path.join(directory, filename), "rb")
-            from_trmdl(directory, f, self.rare, self.loadlods)
+            from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
             f.close()
             return {'FINISHED'}  
         else:
@@ -90,18 +97,20 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdl(directory, f, self.rare, self.loadlods)
+                from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
                 f.close()
             return {'FINISHED'}
 
-def from_trmdl(filep, trmdl, rare, loadlods):
+def from_trmdl(filep, trmdl, rare, loadlods, usedds):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
         bpy.context.scene.collection.children.link(new_collection)
 
-
-    textureextension = ".png"
+    if usedds == True:
+        textureextension = ".dds"
+    else:
+        textureextension = ".png"
 
 
     materials = []
@@ -248,7 +257,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
 
     # TODO create bone_rig_array
     # LINE 1247
-    
+    if chara_check == "Rei" or chara_check == "Akari":
+        trskl = trskl = open(os.path.join(filep, "p0_base.trskl"), "rb")
     
     if trskl is not None:
         print("Parsing TRSKL...")
@@ -337,80 +347,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         print(f"BoneMerge to {bone_merge_string}")
                     else: bone_merge_string = ""
 
-                if chara_check == "Rei" or chara_check == "Akari":
-                    bone_array.append("foot_base")
-                    bone_array.append("waist")
-                    bone_array.append("spine_01")
-                    bone_array.append("spine_02")
-                    bone_array.append("spine_03")
-                    bone_array.append("neck")
-                    bone_array.append("look")
-                    bone_array.append("head")
-                    bone_array.append("left_shoulder")
-                    bone_array.append("left_arm_width")
-                    bone_array.append("left_arm_01")
-                    bone_array.append("left_arm_02")
-                    bone_array.append("left_hand")
-                    bone_array.append("left_thumb_01")
-                    bone_array.append("left_thumb_02")
-                    bone_array.append("left_thumb_03")
-                    bone_array.append("left_index_01")
-                    bone_array.append("left_index_02")
-                    bone_array.append("left_index_03")
-                    bone_array.append("left_middle_01")
-                    bone_array.append("left_middle_02")
-                    bone_array.append("left_middle_03")
-                    bone_array.append("left_ring_01")
-                    bone_array.append("left_ring_02")
-                    bone_array.append("left_ring_03")
-                    bone_array.append("left_pinky_01")
-                    bone_array.append("left_pinky_02")
-                    bone_array.append("left_pinky_03")
-                    bone_array.append("left_attach_off")
-                    bone_array.append("left_attach_on")
-                    bone_array.append("left_hand_roll")
-                    bone_array.append("left_arm_02_sub")
-                    bone_array.append("left_arm_02_roll")
-                    bone_array.append("left_arm_01_roll")
-                    bone_array.append("right_shoulder")
-                    bone_array.append("right_arm_width")
-                    bone_array.append("right_arm_01")
-                    bone_array.append("right_arm_02")
-                    bone_array.append("right_hand")
-                    bone_array.append("right_thumb_01")
-                    bone_array.append("right_thumb_02")
-                    bone_array.append("right_thumb_03")
-                    bone_array.append("right_index_01")
-                    bone_array.append("right_index_02")
-                    bone_array.append("right_index_03")
-                    bone_array.append("right_middle_01")
-                    bone_array.append("right_middle_02")
-                    bone_array.append("right_middle_03")
-                    bone_array.append("right_ring_01")
-                    bone_array.append("right_ring_02")
-                    bone_array.append("right_ring_03")
-                    bone_array.append("right_pinky_01")
-                    bone_array.append("right_pinky_02")
-                    bone_array.append("right_pinky_03")
-                    bone_array.append("right_attach_off")
-                    bone_array.append("right_attach_on")
-                    bone_array.append("right_hand_roll")
-                    bone_array.append("right_arm_02_sub")
-                    bone_array.append("right_arm_02_roll")
-                    bone_array.append("right_arm_01_roll")
-                    bone_array.append("hips")
-                    bone_array.append("leg_width")
-                    bone_array.append("left_leg_01")
-                    bone_array.append("left_leg_02")
-                    bone_array.append("left_foot")
-                    bone_array.append("left_toe")
-                    bone_array.append("left_leg_02_sub")
-                    bone_array.append("right_leg_01")
-                    bone_array.append("right_leg_02")
-                    bone_array.append("right_foot")
-                    bone_array.append("right_toe")
-                    bone_array.append("right_leg_02_sub")
-
                 if trskl_bone_struct_ptr_bone != 0:
                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
                     bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
@@ -475,9 +411,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         if bone_name in bone_rig_array:
                             bone_id_map[bone_rig_array.index(bone_name)] = bone_name
                         else:
-                            bone_rig_array.append(bone_name)
-                            bone_id_map[len(bone_rig_array) - 1] = bone_name
-                        
+                            print(f"Bone {bone_name} not found in bone rig array!")
                         bone_array.append(new_bone)
                 fseek(trskl, bone_ret)
         fclose(trskl)
@@ -506,7 +440,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                 mat_shader = "Standard"; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""
                 mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0; mat_uv_trs_v = 0
                 mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0; mat_uv_trs2_v = 0
-                mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
                 mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
                 mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
                 mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
@@ -938,7 +871,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
 
                         if mat_param_h_string == "UVScaleOffset": mat_uv_scale_u = mat_param_h_value1; mat_uv_scale_v = mat_param_h_value2; mat_uv_trs_u = mat_param_h_value3; mat_uv_trs_v = mat_param_h_value4
                         elif mat_param_h_string == "UVScaleOffset1": mat_uv_scale2_u = mat_param_h_value1; mat_uv_scale2_v = mat_param_h_value2; mat_uv_trs2_u = mat_param_h_value3; mat_uv_trs2_v = mat_param_h_value4
-                        elif mat_param_h_string == "BaseColor": mat_color_r = mat_param_h_value1; mat_color_g = mat_param_h_value2; mat_color_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer1": mat_color1_r = mat_param_h_value1; mat_color1_g = mat_param_h_value2; mat_color1_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
@@ -1087,7 +1019,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     "mat_mtl0": mat_mtl0,
                     "mat_msk0": mat_msk0,
                     "mat_highmsk0": mat_highmsk0,
-                    "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                     "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                     "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
                     "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
@@ -1123,11 +1054,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                 material = bpy.data.materials.new(name=mat["mat_name"])
                 material.use_nodes = True
                 materials.append(material)
-                
-                if 'skin' in mat["mat_name"]:
-                    blend_type = "MULTIPLY"
-                else:
-                    blend_type = "MIX"
+
+                blend_type = "MIX"
 
                 material_output = material.node_tree.nodes.get("Material Output")
                 principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
@@ -1193,239 +1121,281 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                 material.node_tree.links.new(separate_xyz.outputs[0], math_multiply1.inputs[0])
                 material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
                 material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
-                
-                basecolor = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
-                # LAYER MASK MAP
-                
-                lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
-                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
-                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
-                huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                huesaturationvalue.inputs[2].default_value = 2.0
-                huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                huesaturationvalue2.inputs[2].default_value = 2.0
-                
-                color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
-                color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
-                color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
-                color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
-                
-                
-                emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
-                emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
-                emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
-                emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
-                if emcolor1 == (1.0, 1.0, 1.0, 1.0):
-                    emcolor1 = (0.0, 0.0, 0.0, 0.0)
-                if emcolor2 == (1.0, 1.0, 1.0, 1.0):
-                    emcolor2 = (0.0, 0.0, 0.0, 0.0)
-                if emcolor3 == (1.0, 1.0, 1.0, 1.0):
-                    emcolor3 = (0.0, 0.0, 0.0, 0.0)
-                if emcolor4 == (1.0, 1.0, 1.0, 1.0):
-                    emcolor4 = (0.0, 0.0, 0.0, 0.0)
-                print(f'Material {mat["mat_name"]}:')
-                print(f"Color 1: {color1}")
-                print(f"Color 2: {color2}")
-                print(f"Color 3: {color3}")
-                print(f"Color 4: {color4}")
-                print(f"Emission Color 1: {emcolor1}")
-                print(f"Emission Color 2: {emcolor2}")
-                print(f"Emission Color 3: {emcolor3}")
-                print(f"Emission Color 4: {emcolor4}")
-                print("---")
-     
-                mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color1.blend_type = blend_type
-                mix_color1.inputs[0].default_value = 0.0
-                mix_color1.inputs[1].default_value = (1, 1, 1, 1)
-                mix_color1.inputs[2].default_value = color1
-                mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color2.blend_type = blend_type
-                mix_color2.inputs[0].default_value = 0.0
-                mix_color2.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color2.inputs[2].default_value = color2
-                mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color3.blend_type = blend_type
-                mix_color3.inputs[0].default_value = 0.0
-                mix_color3.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color3.inputs[2].default_value = color3
-                mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color4.blend_type = blend_type
-                mix_color4.inputs[0].default_value = 0.0
-                mix_color4.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color4.inputs[2].default_value = color4
-                mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_color5.blend_type = blend_type
-                mix_color5.inputs[0].default_value = 0.0
-                mix_color5.inputs[1].default_value = (0, 0, 0, 0)
-                mix_color5.inputs[2].default_value = (1, 1, 1, 1)
-                
-                
-                
-                mix_emcolor1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_emcolor1.blend_type = blend_type
-                mix_emcolor1.inputs[1].default_value = (0, 0, 0, 0)
-                mix_emcolor1.inputs[2].default_value = emcolor1
-                mix_emcolor2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_emcolor2.blend_type = blend_type
-                mix_emcolor2.inputs[1].default_value = (0, 0, 0, 0)
-                mix_emcolor2.inputs[2].default_value = emcolor2
-                mix_emcolor3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_emcolor3.blend_type = blend_type
-                mix_emcolor3.inputs[1].default_value = (0, 0, 0, 0)
-                mix_emcolor3.inputs[2].default_value = emcolor3
-                mix_emcolor4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                mix_emcolor4.blend_type = blend_type
-                mix_emcolor4.inputs[1].default_value = (0, 0, 0, 0)
-                mix_emcolor4.inputs[2].default_value = emcolor4
-                
-                material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
-                material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
-                material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                material.node_tree.links.new(mix_color4.outputs[0], color_output)
-
-                material.node_tree.links.new(mix_emcolor1.outputs[0], mix_emcolor2.inputs[1])
-                material.node_tree.links.new(mix_emcolor2.outputs[0], mix_emcolor3.inputs[1])
-                material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
-                material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
-                material.node_tree.links.new(mix_emcolor4.outputs[0], principled_bsdf.inputs[19])
-              
-                
-                separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
-                material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
-                material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
-                material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
-
-                material.node_tree.links.new(separate_color.outputs[0], mix_emcolor1.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[1], mix_emcolor2.inputs[0])
-                material.node_tree.links.new(separate_color.outputs[2], mix_emcolor3.inputs[0])
-                material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_emcolor4.inputs[0])
+                    
+                if chara_check == "Pokemon" or mat["mat_name"] == "eye":
+                    # LAYER MASK MAP
+                    
+                    lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
+                        lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
+                        lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                    huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
+                    huesaturationvalue.inputs[2].default_value = 2.0
+                    huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
+                    huesaturationvalue2.inputs[2].default_value = 2.0
     
-                material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
-                material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
-                material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
+                    color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
+                    color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
+                    color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
+                    color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+                    
+                    
+                    emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
+                    emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
+                    emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
+                    emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
+                    if emcolor1 == (1.0, 1.0, 1.0, 1.0) and emcolor2 == (1.0, 1.0, 1.0, 1.0) and emcolor3 == (1.0, 1.0, 1.0, 1.0) and emcolor4 == (1.0, 1.0, 1.0, 1.0):
+                        emcolor1 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor2 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor3 = (0.0, 0.0, 0.0, 0.0)
+                        emcolor4 = (0.0, 0.0, 0.0, 0.0)
+                    print(f'Material {mat["mat_name"]}:')
+                    print(f"Color 1: {color1}")
+                    print(f"Color 2: {color2}")
+                    print(f"Color 3: {color3}")
+                    print(f"Color 4: {color4}")
+                    print(f"Emission Color 1: {emcolor1}")
+                    print(f"Emission Color 2: {emcolor2}")
+                    print(f"Emission Color 3: {emcolor3}")
+                    print(f"Emission Color 4: {emcolor4}")
+                    print("---")
+     
+                    mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color1.blend_type = blend_type
+                    mix_color1.inputs[1].default_value = (1, 1, 1, 1)
+                    mix_color1.inputs[2].default_value = color1
+                    mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color2.blend_type = blend_type
+                    mix_color2.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color2.inputs[2].default_value = color2
+                    mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color3.blend_type = blend_type
+                    mix_color3.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color3.inputs[2].default_value = color3
+                    mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color4.blend_type = blend_type
+                    mix_color4.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color4.inputs[2].default_value = color4
+                    mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_color5.blend_type = blend_type
+                    mix_color5.inputs[0].default_value = 0.0
+                    mix_color5.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_color5.inputs[2].default_value = (1, 1, 1, 1)
+                    
+                    
+                    
+                    mix_emcolor1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor1.blend_type = blend_type
+                    mix_emcolor1.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor1.inputs[2].default_value = emcolor1
+                    mix_emcolor2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor2.blend_type = blend_type
+                    mix_emcolor2.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor2.inputs[2].default_value = emcolor2
+                    mix_emcolor3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor3.blend_type = blend_type
+                    mix_emcolor3.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor3.inputs[2].default_value = emcolor3
+                    mix_emcolor4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                    mix_emcolor4.blend_type = blend_type
+                    mix_emcolor4.inputs[1].default_value = (0, 0, 0, 0)
+                    mix_emcolor4.inputs[2].default_value = emcolor4
+                    
+                    material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
+                    material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
+                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
+                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
+                    material.node_tree.links.new(mix_color4.outputs[0], color_output)
+
+                    material.node_tree.links.new(mix_emcolor1.outputs[0], mix_emcolor2.inputs[1])
+                    material.node_tree.links.new(mix_emcolor2.outputs[0], mix_emcolor3.inputs[1])
+                    material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
+                    material.node_tree.links.new(mix_emcolor3.outputs[0], mix_emcolor4.inputs[1])
+                    material.node_tree.links.new(mix_emcolor4.outputs[0], principled_bsdf.inputs[19]) 
+              
+                    
+                    separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                    material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
+                    material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
+                    material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
+                    material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
+
+                    material.node_tree.links.new(separate_color.outputs[0], mix_emcolor1.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[1], mix_emcolor2.inputs[0])
+                    material.node_tree.links.new(separate_color.outputs[2], mix_emcolor3.inputs[0])
+                    material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_emcolor4.inputs[0])
+    
+                    material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
+                    material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
+                    material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
                 
-                
-                if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
-                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
-                    material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
-                    material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
-                    material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0])
-                    if 'hair' in mat["mat_name"] in mat["mat_name"] and basecolor != (1, 1, 1, 1):
-                        haircolor = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                        haircolor.blend_type = "MULTIPLY"
-                        haircolor.inputs[0].default_value = 1.0
-                        material.node_tree.links.new(alb_image_texture.outputs[0], haircolor.inputs[1])
-                        haircolor.inputs[2].default_value = basecolor
-                        material.node_tree.links.new(haircolor.outputs[0], color_output)
+                    
+                    if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
+                        material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
+                        material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
+                        material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
+
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
+                        if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        else:
+                            print("No Highlight")
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
+                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
+                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
                         
-                if mat["mat_enable_highlight_map"]:
-                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
-                    if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png")) == True and mat["mat_name"] == "eye_r":
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png")) == True and mat["mat_name"] == "eye_l":
-                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png"))
-                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                    else:
-                        print("No Highlight")
-                    material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
-                    material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
-                    material.node_tree.links.new(mix_color5.outputs[0], color_output)
+                        
+                    if mat["mat_enable_normal_map"]:
+                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
+                            normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
+                            normal_image_texture.image.colorspace_settings.name = "Non-Color"
+                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
+                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
+                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                        if mat["mat_shader"] == "Transparent":
+                            material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
+                            material.node_tree.links.new(reflectionpart5.outputs[0], reflectionpart6.inputs[1])                            
+                            material.node_tree.links.new(reflectionpart6.outputs[0], principled_bsdf.inputs[21])
+                        
+                    if mat["mat_enable_metallic_map"]:
+                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
+                            metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
+                            metalness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
 
-                if mat["mat_enable_normal_map"]:
-                    normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
-                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
-                        normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                    separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                    combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                    normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
-                    material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                    material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
-                    material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
-                    material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
-                    material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                    if mat["mat_enable_emission_color_map"]:
+                        emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension)) == True:
+                            emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension))
+                        material.node_tree.links.new(emission_image_texture.outputs[0], principled_bsdf.inputs[19])                        
+                        
+                    if mat["mat_enable_roughness_map"]:
+                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension)) == True:
+                            roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
+                            roughness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
+                        material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
+                        
+                    if mat["mat_enable_ao_map"]:
+                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension)) == True:            
+                            ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension))
+                            ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                        mix_color6.blend_type = "MULTIPLY"
+                        mix_color6.inputs[0].default_value = 1.0
+                        if mix_color5 == True:
+                            material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
+                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
+                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                        else:
+                            material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
+                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
+                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                    if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                        if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
+                            material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
 
-                    
-                if mat["mat_enable_metallic_map"]:
-                    metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
-                        metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
-                        metalness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
+                        
+                else:
+                    if mat["mat_enable_base_color_map"]:
+                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                            alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
+                        material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
+                        material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
 
-                if mat["mat_enable_emission_color_map"]:
-                    emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    if os.path.exists(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension)) == True:
-                        emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension))
-                    material.node_tree.links.new(emission_image_texture.outputs[0], principled_bsdf.inputs[19])                        
-                    
-                if mat["mat_enable_roughness_map"]:
-                    roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    if os.path.exists(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension)) == True:
-                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
-                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                    material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
-                    material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
-                    
-                if mat["mat_enable_ao_map"]:
-                    ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    if os.path.exists(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension)) == True:            
-                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension))
-                    mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color6.blend_type = "MULTIPLY"
-                    mix_color6.inputs[0].default_value = 1.0
-                    if mix_color5 == True:
-                        material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
-                        material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
-                        material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                    else:
-                        material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
+
+
+                    if mat["mat_enable_highlight_map"]:
+                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        else:
+                            highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                            highlight_image_texture.image.colorspace_settings.name = "Non-Color"                        
+                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
+                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
+                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
+
+                    if mat["mat_enable_normal_map"]:
+                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
+                            normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
+                            normal_image_texture.image.colorspace_settings.name = "Non-Color"
+                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
+                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
+                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
+                        if mat["mat_shader"] == "Transparent":
+                            material.node_tree.links.new(normal_map2.outputs[0], reflectionpart5.inputs[1])
+                            material.node_tree.links.new(reflectionpart5.outputs[0], principled_bsdf.inputs[21])
+
+                    if mat["mat_enable_emission_color_map"]:
+                        emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension)) == True:
+                            emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension))
+                        material.node_tree.links.new(emission_image_texture.outputs[0], principled_bsdf.inputs[19])    
+                        
+                    if mat["mat_enable_metallic_map"]:
+                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
+                            metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
+                            metalness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
+                        
+                    if mat["mat_enable_roughness_map"]:
+                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension)) == True:
+                            roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
+                            roughness_image_texture.image.colorspace_settings.name = "Non-Color"
+                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])  
+                        
+                    if mat["mat_enable_ao_map"]:
+                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                        if os.path.exists(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension)) == True:
+                            ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension))
+                            ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
+                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
+                        mix_color6.blend_type = "MULTIPLY"
+                        mix_color6.inputs[0].default_value = 1.0
+                        material.node_tree.links.new(alb_image_texture.outputs[0], mix_color6.inputs[1])
                         material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                         material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                    if 'hair' in mat["mat_name"] in mat["mat_name"] and basecolor != (1, 1, 1, 1):
-                        material.node_tree.links.new(mix_color6.outputs[0], haircolor.inputs[1])
-                        material.node_tree.links.new(haircolor.outputs[0], color_output)
-                if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
-                    if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
-
-                if mat["mat_color1_r"] == (1.0) and mat["mat_color1_g"] == (1.0) and mat["mat_color1_b"] == (1.0):
-                    color1 = mix_color1.inputs[0].links[0]
-                    material.node_tree.links.remove(color1)
-    
-                if mat["mat_color2_r"] == (1.0) and mat["mat_color2_g"] == (1.0) and mat["mat_color2_b"] == (1.0):
-                    color2 = mix_color2.inputs[0].links[0]
-                    material.node_tree.links.remove(color2)                    
-    
-                if mat["mat_color3_r"] == (1.0) and mat["mat_color3_g"] == (1.0) and mat["mat_color3_b"] == (1.0):
-                    color3 = mix_color3.inputs[0].links[0]
-                    material.node_tree.links.remove(color3)                    
-    
-                if mat["mat_color4_r"] == (1.0) and mat["mat_color4_g"] == (1.0) and mat["mat_color4_b"] == (1.0):
-                    color4 = mix_color4.inputs[0].links[0]
-                    material.node_tree.links.remove(color4)
-                if 'eyelash' in mat["mat_name"] and os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == False:
-                    material.node_tree.links.remove(principled_bsdf.inputs[0].links[0])
-                    color_output.default_value = basecolor
 
     if loadlods == False:
         trmsh_count = 1
@@ -1499,7 +1469,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             weight_array = []
                             Morphs_array = []
                             MorphName_array = []
-                            groupoffset_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
                             positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
@@ -1514,40 +1483,20 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             poly_group_struct_len = readshort(trmsh)
 
 
-                            if poly_group_struct_len == 0x001E:
-                                poly_group_struct_section_len = readshort(trmsh)
-                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
-                                poly_group_struct_ptr_bbbox = readshort(trmsh)
-                                poly_group_struct_ptp_unc_a = readshort(trmsh)
-                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
-                                poly_group_struct_ptr_mat_list = readshort(trmsh)
-                                poly_group_struct_ptr_unk_b = readshort(trmsh)
-                                poly_group_struct_ptr_unk_c = readshort(trmsh)
-                                poly_group_struct_ptr_unk_d = readshort(trmsh)
-                                poly_group_struct_ptr_unk_e = readshort(trmsh)
-                                poly_group_struct_ptr_unk_float = readshort(trmsh)
-                                poly_group_struct_ptr_unk_g = readshort(trmsh)
-                                poly_group_struct_ptr_morphname = readshort(trmsh)
-                                poly_group_struct_ptr_vis_group_name = readshort(trmsh)
-                                poly_group_struct_ptr_unk_i = 0
-                                poly_group_struct_ptr_group_name = 0
-                            elif poly_group_struct_len == 0x0022:
-                                poly_group_struct_section_len = readshort(trmsh)
-                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
-                                poly_group_struct_ptr_bbbox = readshort(trmsh)
-                                poly_group_struct_ptp_unc_a = readshort(trmsh)
-                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
-                                poly_group_struct_ptr_mat_list = readshort(trmsh)
-                                poly_group_struct_ptr_unk_b = readshort(trmsh)
-                                poly_group_struct_ptr_unk_c = readshort(trmsh)
-                                poly_group_struct_ptr_unk_d = readshort(trmsh)
-                                poly_group_struct_ptr_unk_e = readshort(trmsh)
-                                poly_group_struct_ptr_unk_float = readshort(trmsh)
-                                poly_group_struct_ptr_unk_g = readshort(trmsh)
-                                poly_group_struct_ptr_morphname = readshort (trmsh)
-                                poly_group_struct_ptr_vis_group_name = readshort (trmsh)
-                                poly_group_struct_ptr_unk_i = readshort(trmsh)
-                                poly_group_struct_ptr_group_name = readshort(trmsh)
+                            poly_group_struct_section_len = readshort(trmsh)
+                            poly_group_struct_ptr_poly_group_name = readshort(trmsh)
+                            poly_group_struct_ptr_bbbox = readshort(trmsh)
+                            poly_group_struct_ptp_unc_a = readshort(trmsh)
+                            poly_group_struct_ptr_vert_buff = readshort(trmsh)
+                            poly_group_struct_ptr_mat_list = readshort(trmsh)
+                            poly_group_struct_ptr_unk_b = readshort(trmsh)
+                            poly_group_struct_ptr_unk_c = readshort(trmsh)
+                            poly_group_struct_ptr_unk_d = readshort(trmsh)
+                            poly_group_struct_ptr_unk_e = readshort(trmsh)
+                            poly_group_struct_ptr_unk_float = readshort(trmsh)
+                            poly_group_struct_ptr_unk_g = readshort(trmsh)
+                            poly_group_struct_ptr_Morph_Name = readshort(trmsh)
+                            poly_group_struct_ptr_vis_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_mat_list)
@@ -1613,15 +1562,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 poly_group_name_len = readlong(trmsh)
                                 poly_group_name = readfixedstring(trmsh, poly_group_name_len)
                                 print(f"Building {poly_group_name}...")
-                                
-                            if poly_group_struct_ptr_group_name != 0:
-                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_group_name)
-                                group_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, group_name_header_offset)
-                                group_name_count = readlong(trmsh)
-                                for g in range(group_name_count):
-                                    group_name_offset = ftell(trmsh) + readlong(trmsh)
-                                    groupoffset_array.append(group_name_offset)
-                                    
                             if poly_group_struct_ptr_vis_group_name != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vis_group_name)
                                 vis_group_name_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, vis_group_name_offset)
@@ -1629,8 +1569,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 vis_group_name = readfixedstring(trmsh, vis_group_name_len)
                                 # changed the output variable because the original seems to be a typo
                                 print(f"VisGroup: {vis_group_name}")
-                            if poly_group_struct_ptr_morphname !=0:
-                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_morphname)
+                            if poly_group_struct_ptr_Morph_Name !=0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_Morph_Name)
                                 morph_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, morph_name_header_offset)
                                 morph_name_count = readlong(trmsh)
                                 for m in range(morph_name_count):
@@ -1868,18 +1808,9 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             vert_buffer_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_struct)
                             vert_buffer_struct_len = readshort(trmbf)
 
-                            if vert_buffer_struct_len == 0x0008:
-                                vert_buffer_struct_section_length = readshort(trmbf)
-                                vert_buffer_struct_ptr_faces = readshort(trmbf)
-                                vert_buffer_struct_ptr_verts = readshort(trmbf)
-                                vert_buffer_struct_ptr_groups = 0
-                            if vert_buffer_struct_len == 0x000A:
-                                vert_buffer_struct_section_length = readshort(trmbf)
-                                vert_buffer_struct_ptr_faces = readshort(trmbf)
-                                vert_buffer_struct_ptr_verts = readshort(trmbf)
-                                vert_buffer_struct_ptr_groups = readshort(trmbf)
-                            else:
-                                raise AssertionError("Unexpected vertex buffer struct length!")
+                            vert_buffer_struct_section_length = readshort(trmbf)
+                            vert_buffer_struct_ptr_faces = readshort(trmbf)
+                            vert_buffer_struct_ptr_verts = readshort(trmbf)
 
                             if vert_buffer_struct_ptr_verts != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_verts)
@@ -1908,7 +1839,9 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                         vert_buffer_byte_count = readlong(trmbf)
                                         if y == 0:
                                             print(f"Vertex buffer {x} start: {hex(ftell(trmbf))}")
-
+                                            print(vert_buffer_byte_count)
+                                            print(poly_group_array[x]["vert_buffer_stride"])
+                                            print(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"])
                                             for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
                                                 if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
                                                     vx = readhalffloat(trmbf)
@@ -2074,7 +2007,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                     SVUnk = readlong(trmbf)
                                                 else:
                                                     raise AssertionError("Unknown ?????? type!")
-                                                
+
                                                 vert_array.append((vx, vy, vz))
                                                 normal_array.append((nx, ny, nz))
                                                 # color_array.append((colorr, colorg, colorb))
@@ -2132,7 +2065,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                         facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
                                         facepoint_byte_count = readlong(trmbf)
                                         print(f"Facepoint {x} start: {hex(ftell(trmbf))}")
-                                        
+
+                                        print(len(vert_array) > 65536)
                                         if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
                                             for v in range(facepoint_byte_count // 12):
                                                 fa = readlong(trmbf)
@@ -2147,127 +2081,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                 face_array.append([fa, fb, fc])
                                         print(f"Facepoint {x} end: {hex(ftell(trmbf))}")
                                     fseek(trmbf, face_buff_ret)
-
-                            if vert_buffer_struct_ptr_groups != 0:
-                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_groups)
-                                group_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, group_start)
-                                group_count = readlong(trmbf)
-                                if group_count > 0:
-                                    MorphNameNext = 1
-                                    for g in range(group_count):
-                                        fseek(trmsh, groupoffset_array[g])
-                                        group_namestruct = ftell(trmsh) - readlong(trmsh)
-                                        fseek(trmsh, group_namestruct)
-                                        groupnamestructlen = readshort(trmsh)
-                                        if groupnamestructlen == 0x000A:
-                                            group_structsectionlen = readshort(trmsh)
-                                            group_structptrparama = readshort(trmsh)
-                                            group_structptrparammorph = readshort(trmsh)
-                                            group_structprtparamname = readshort(trmsh)
-                                        else:
-                                            raise AssertionError("Unexpected morph group buffer struct length!")
-                                        
-                                        fseek(trmsh, groupoffset_array[g] + group_structprtparamname)
-                                        group_nameoffset = ftell(trmsh) + readlong(trmsh)
-                                        fseek(trmsh, group_nameoffset)
-                                        group_namelen = readlong(trmsh)
-                                        group_name = readfixedstring(trmsh, group_namelen)
-                                        
-                                        
-                                        fseek(trmsh, groupoffset_array[g] + group_structptrparammorph)
-                                        group_morphoffset = ftell(trmsh) + readlong(trmsh)
-                                        fseek(trmsh, group_morphoffset)
-                                        group_morphnamecount = readlong(trmsh)
-                                        for y in range(group_morphnamecount):
-                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
-                                            group_morhpnameret = ftell(trmsh)
-                                            fseek(trmsh, group_morphnameoffset)
-                                            
-                                            group_namemorphstruct = ftell(trmsh) - readlong(trmsh)
-                                            fseek(trmsh, group_namemorphstruct)
-                                            group_namemorphstructlen = readshort(trmsh)
-                                            if group_namemorphstructlen == 0x000A:
-                                                group_namemorphstructsectionlen = readshort(trmsh)
-                                                group_namemorphstructptrparamid = readshort(trmsh)
-                                                group_namemorphstructptrparamname = readshort(trmsh)
-                                                group_namemorphstructptrparamflag = readshort(trmsh)
-                                            else:
-                                                raise AssertionError("Unexpected morph group buffer struct length!")
-                                            fseek(trmsh, group_morphnameoffset + group_namemorphstructptrparamname)
-                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
-                                            fseek(trmsh, group_morphnameoffset)
-                                            group_morphnamelen = readlong(trmsh)
-                                            group_morphname = readfixedstring(trmsh, group_morphnamelen)
-                                            MorphName_array.append(group_morphname)
-                                            fseek(trmsh, group_morhpnameret)
-                                        
-                                        MorphVertIDs_array = []
-                                        group_offset = ftell(trmbf) + readlong(trmbf)
-                                        group_ret = ftell(trmbf)
-                                        fseek(trmbf, group_offset)
-                                        group_struct = ftell(trmbf) - readlong(trmbf)
-                                        fseek(trmbf, group_struct)
-                                        group_structlen = readshort(trmbf)
-                                        if group_structlen == 0x0006:
-                                            group_structsectionlen = readshort(trmbf)
-                                            group_structptrparam = readshort(trmbf)
-                                        else:
-                                            raise AssertionError("Unexpected morph group buffer struct lenght!")
-                                        
-                                        fseek(trmbf, group_offset + group_structptrparam)
-                                        group_morphsoffset = ftell(trmbf) + readlong(trmbf)
-                                        fseek(trmbf, group_morphsoffset)
-                                        group_morphscount = readlong(trmbf)
-                                        print(f"Group {x} header start: {group_morphsoffset}")
-                                        
-                                        for y in range(group_morphscount):
-                                            morphgroupoffset = ftell(trmbf) + readlong(trmbf)
-                                            groupret = ftell(trmbf)
-                                            fseek(trmbf, morphgroupoffset)
-                                            print(f"Group morph {y} start: {ftell(trmbf)}")
-                                            bufferstruct = ftell(trmbf) - readlong(trmbf)
-                                            fseek(trmbf, bufferstruct)
-                                            morphbufferstructlen = readshort(trmbf)
-                                            if morphbufferstructlen == 0x0006:
-                                                morphbuffersectionlen = readshort(trmbf)
-                                                morphbufferstructptrparam = readshort(trmbf)
-                                            else:
-                                                raise AssertionError("Unexpected group sub buffer struct lenght!")
-                                            
-                                            fseek(trmbf, morphgroupoffset + morphbufferstructptrparam)
-                                            morphbuffergroupsuboffset = ftell(trmbf) + readlong(trmbf)
-                                            morphbuffergroupsbytecount = readlong(trmbf)
-                                            if y == 0:
-                                                for v in range(morphbuffergroupsbytecount // 0x04):
-                                                    MorphVertID = readlong(trmbf)
-                                                    MorphVertIDs_array.append(MorphVertID)
-                                            else:
-                                                MorphVert_array = []
-                                                MorphNormal_array = []
-                                                for v in range(len(vert_array)):
-                                                    MorphVert_array.append(vert_array[v])
-                                                    MorphNormal_array.append(normal_array[v])
-                                                for v in range(morphbuffergroupsbytecount // 0x1C):
-                                                    #Morphs always seem to use this setup.
-                                                    vx = readfloat(trmbf)
-                                                    vy = readfloat(trmbf)
-                                                    vz = readfloat(trmbf)
-                                                    nx = readhalffloat(trmbf)
-                                                    ny = readhalffloat(trmbf)
-                                                    nz = readhalffloat(trmbf)
-                                                    nq = readhalffloat(trmbf)
-                                                    tanx = readhalffloat(trmbf)
-                                                    tany = readhalffloat(trmbf)
-                                                    tanz = readhalffloat(trmbf)
-                                                    tanq = readhalffloat(trmbf)
-                                                    if MorphVertIDs_array[v] != 0:
-                                                        MorphVert_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + vx, vert_array[MorphVertIDs_array[v]][1] + vy, vert_array[MorphVertIDs_array[v]][2] + vz]
-                                                        MorphNormal_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + nx, vert_array[MorphVertIDs_array[v]][1] + ny, vert_array[MorphVertIDs_array[v]][2] + nz]
-                                                print(f"Group {x} morph {y} end: {hex(ftell(trmbf))}")
-                                                Morphs_array.append(MorphVert_array)
-                                            fseek(trmbf, groupret)
-                                        fseek(trmbf, group_ret)
-                            fseek(trmbf, vert_buffer_ret)                                                          
+                            fseek(trmbf, vert_buffer_ret)
 
                             print("Making object...")
 
@@ -2300,14 +2114,11 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
-                                for p in new_mesh.polygons:
-                                    p.use_smooth = True
                                 new_object = bpy.data.objects.new(poly_group_name, new_mesh)
                                 if len(MorphName_array) > 0:
                                     sk_basis = new_object.shape_key_add(name='Basis')
                                     sk_basis.interpolation = 'KEY_LINEAR'
                                     new_object.data.shape_keys.use_relative = True
-                                    print(MorphName_array)
                                     for m in range(len(MorphName_array)):
                                         sk = new_object.shape_key_add(name=MorphName_array[m])
                                         for i in range(len(Morphs_array[m])):
@@ -2321,21 +2132,18 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                     for face in new_object.data.polygons:
                                         for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
                                             w = weight_array[vert_idx]
+
                                             for i in range(len(w["boneids"])):
-                                                try:
-                                                    bone_id = bone_id_map[w['boneids'][i]]
-                                                except:
-                                                    bone_id = None
-                                                if bone_id:
-                                                    weight = w['weights'][i]
+                                                bone_id = bone_id_map[w['boneids'][i]]
+                                                weight = w['weights'][i]
 
-                                                    group = None
-                                                    if new_object.vertex_groups.get(bone_id) == None:
-                                                        group = new_object.vertex_groups.new(name=bone_id)
-                                                    else:
-                                                        group = new_object.vertex_groups[bone_id]
+                                                group = None
+                                                if new_object.vertex_groups.get(bone_id) == None:
+                                                    group = new_object.vertex_groups.new(name=bone_id)
+                                                else:
+                                                    group = new_object.vertex_groups[bone_id]
 
-                                                    group.add([vert_idx], weight, 'REPLACE')
+                                                group.add([vert_idx], weight, 'REPLACE')
 
                                 # # vertex colours
                                 # color_layer = new_object.data.vertex_colors.new()
@@ -2401,7 +2209,7 @@ def readshort(file):
 # SIGNED!!!!
 def readlong(file):
     bytes_data = file.read(4)
-    #print(f"readlong: {bytes_data}")
+    # print(f"readlong: {bytes_data}")
     return int.from_bytes(bytes_data, byteorder='little', signed=True)
 
 
@@ -2415,12 +2223,12 @@ def readhalffloat(file):
 
 def readfixedstring(file, length):
     bytes_data = file.read(length)
-    #print(f"readfixedstring ({length}): {bytes_data}")
+    # print(f"readfixedstring ({length}): {bytes_data}")
     return bytes_data.decode('utf-8')
 
 
 def fseek(file, offset):
-    #print(f"Seeking to {offset}")
+    # print(f"Seeking to {offset}")
     file.seek(offset)
 
 
