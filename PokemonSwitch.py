@@ -82,7 +82,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
             f = open(os.path.join(directory, filename), "rb")
-            from_trmdl(directory, f, self.rare, self.loadlods)
+            from_trmdlsv(directory, f, self.rare, self.loadlods)
             f.close()
             return {'FINISHED'}  
         else:
@@ -90,14 +90,14 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdl(directory, f, self.rare, self.loadlods)
+                from_trmdlsv(directory, f, self.rare, self.loadlods)
                 f.close()
             return {'FINISHED'}
 
 def from_trmdlsv(filep, trmdl, rare, loadlods):
     # make collection
     if IN_BLENDER_ENV:
-        new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
+        new_collection = bpy.data.collections.new(os.path.basename(trmdl.name[:-6]))
         bpy.context.scene.collection.children.link(new_collection)
 
 
@@ -2418,11 +2418,6 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
-    usedds: BoolProperty(
-            name="Use DDS Textures",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
     def draw(self, context):
         layout = self.layout
 
@@ -2435,15 +2430,12 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
         box = layout.box()
         box.prop(self, 'loadlods')
         
-        box = layout.box()
-        box.prop(self, 'usedds')
-        
     def execute(self, context):
         directory = os.path.dirname(self.filepath)
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
             f = open(os.path.join(directory, filename), "rb")
-            from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
+            from_trmdl(directory, f, self.rare, self.loadlods)
             f.close()
             return {'FINISHED'}  
         else:
@@ -2451,11 +2443,11 @@ class PokeArcImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdl(directory, f, self.rare, self.loadlods, self.usedds)
+                from_trmdl(directory, f, self.rare, self.loadlods)
                 f.close()
             return {'FINISHED'}
 
-def from_trmdl(filep, trmdl, rare, loadlods, usedds):
+def from_trmdl(filep, trmdl, rare, loadlods):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
