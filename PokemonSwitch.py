@@ -2453,10 +2453,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
         bpy.context.scene.collection.children.link(new_collection)
 
-    if usedds == True:
-        textureextension = ".dds"
-    else:
-        textureextension = ".png"
+    textureextension = ".png"
 
 
     materials = []
