@@ -1736,7 +1736,7 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                         # -- 0x30 = 2 floats
                                         # -- 0x33 = 3 floats
                                         # -- 0x36 = 4 floats
-
+                                        print(f'vert_buff_param_type = {vert_buff_param_type}')
                                         if vert_buff_param_type == 0x01:
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected positions layer!")
@@ -1771,11 +1771,19 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                 tritangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
                                             else:
                                                 raise AssertionError("Unexpected tangents layer!")
+                                                
+                                                
+                                                
+                                        
                                         elif vert_buff_param_type == 0x05:
+                                            print(f'vert_buff_param_layer = {vert_buff_param_layer}')
                                             if vert_buff_param_layer == 0:
+                                                print("bufflayer0 confirmed")
                                                 if vert_buff_param_format == 0x14:
+                                                    print("vert_buff_param_format0x14 confirmed")
                                                     colors_fmt = "4BytesAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x04
                                                 elif vert_buff_param_format == 0x36:
+                                                    print("vert_buff_param_format0x36 confirmed")
                                                     colors_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
                                                     raise AssertionError("Unexpected colors format!")
@@ -1786,6 +1794,9 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                     colors2_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
                                                     raise AssertionError("Unexpected colors2 format!")
+                                                    
+                                                    
+
                                         elif vert_buff_param_type == 0x06:
                                             if vert_buff_param_layer == 0:
                                                 if vert_buff_param_format != 0x30:
@@ -2013,7 +2024,10 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                     raise AssertionError("Unknown uvs4 type!")
 
                                                 if poly_group_array[x]["colors_fmt"] == "None":
-                                                    pass
+                                                    colorr = 255
+                                                    colorg = 255
+                                                    colorb = 255
+                                                    colora = 1
                                                 elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
                                                     colorr = readbyte(trmbf)
                                                     colorg = readbyte(trmbf)
@@ -2028,7 +2042,10 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                     raise AssertionError("Unknown colors type!")
 
                                                 if poly_group_array[x]["colors2_fmt"] == "None":
-                                                    pass
+                                                    colorr2 = 255
+                                                    colorg2 = 255
+                                                    colorb2 = 255
+                                                    colora2 = 1
                                                 elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
                                                     colorr2 = readbyte(trmbf)
                                                     colorg2 = readbyte(trmbf)
@@ -2077,9 +2094,12 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                 
                                                 vert_array.append((vx, vy, vz))
                                                 normal_array.append((nx, ny, nz))
-                                                # color_array.append((colorr, colorg, colorb))
-                                                # alpha_array.append(colora)
+                                                
+                                                
                                                 uv_array.append((tu, tv))
+                                                
+                                                color_array.append((colorr, colorg, colorb))
+                                                alpha_array.append(colora)
                                                 if trskl is not None:
                                                     w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
                                                     b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
@@ -2338,28 +2358,24 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                                     group.add([vert_idx], weight, 'REPLACE')
 
                                 # # vertex colours
-                                # color_layer = new_object.data.vertex_colors.new()
-                                # new_object.data.vertex_colors.active = color_layer
-                                #
-                                # print(f"color_array: {len(color_array)}")
-                                # print(f"polygons: {len(new_object.data.polygons)}")
-                                #
-                                # for i, poly in enumerate(new_object.data.polygons):
-                                #     print(f"poly: {i}")
-                                #     for v, vert in enumerate(poly.vertices):
-                                #         loop_index = poly.loop_indices[v]
-                                #
-                                #         # print(f"loop_index: {loop_index}")
-                                #         # print(f"vert: {vert}")
-                                #
-                                #         color_layer.data[loop_index].color = (color_array[vert][0] / 255, color_array[vert][1] / 255, color_array[vert][2] / 255, 1)
+                                color_layer = new_object.data.vertex_colors.new(name="Color")
+                                new_object.data.vertex_colors.active = color_layer
+                                #print(f"color_array: {len(color_array)}")
+                                #print(f"polygons: {len(new_object.data.polygons)}")
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    #print(f"poly: {i}")
+                                    for v, vert in enumerate(poly.vertices):
+                                        loop_index = poly.loop_indices[v]
+                                
+                                        #print(f"loop_index: {loop_index}")
+                                        #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
+                                
+                                        color_layer.data[loop_index].color = (color_array[vert][0], color_array[vert][1], color_array[vert][2], 255)
 
                                 for mat in materials:
                                     new_object.data.materials.append(mat)
 
                                 # materials
-                                for i, poly in enumerate(new_object.data.polygons):
-                                    poly.material_index = face_mat_id_array[i]
 
                                 # uvs
                                 uv_layers = new_object.data.uv_layers
@@ -2371,6 +2387,13 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                 if len(uv4_array) > 0:
                                     uv4_layer = uv_layers.new(name="UV4Map")
                                 uv_layers.active = uv_layer
+
+
+
+
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    poly.material_index = face_mat_id_array[i]
+
 
                                 for face in new_object.data.polygons:
                                     for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
@@ -2389,8 +2412,6 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                                 new_collection.objects.link(new_object)
 
 
-
-    
 class PokeArcImport(bpy.types.Operator, ImportHelper):
     bl_idname = "custom_import_scene.pokemonlegendsarceus"
     bl_label = "Import"
@@ -4259,7 +4280,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                     raise AssertionError("Unknown uvs4 type!")
 
                                                 if poly_group_array[x]["colors_fmt"] == "None":
-                                                    pass
+                                                    colorr = 255
+                                                    colorg = 255
+                                                    colorb = 255
+                                                    colora = 1
                                                 elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
                                                     colorr = readbyte(trmbf)
                                                     colorg = readbyte(trmbf)
@@ -4274,7 +4298,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                     raise AssertionError("Unknown colors type!")
 
                                                 if poly_group_array[x]["colors2_fmt"] == "None":
-                                                    pass
+                                                    colorr2 = 255
+                                                    colorg2 = 255
+                                                    colorb2 = 255
+                                                    colora2 = 1
                                                 elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
                                                     colorr2 = readbyte(trmbf)
                                                     colorg2 = readbyte(trmbf)
@@ -4316,8 +4343,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
 
                                                 vert_array.append((vx, vy, vz))
                                                 normal_array.append((nx, ny, nz))
-                                                # color_array.append((colorr, colorg, colorb))
-                                                # alpha_array.append(colora)
+                                                color_array.append((colorr, colorg, colorb))
+                                                alpha_array.append(colora)
                                                 uv_array.append((tu, tv))
                                                 if trskl is not None:
                                                     w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
@@ -4441,22 +4468,19 @@ def from_trmdl(filep, trmdl, rare, loadlods):
 
                                                 group.add([vert_idx], weight, 'REPLACE')
 
-                                # # vertex colours
-                                # color_layer = new_object.data.vertex_colors.new()
-                                # new_object.data.vertex_colors.active = color_layer
-                                #
-                                # print(f"color_array: {len(color_array)}")
-                                # print(f"polygons: {len(new_object.data.polygons)}")
-                                #
-                                # for i, poly in enumerate(new_object.data.polygons):
-                                #     print(f"poly: {i}")
-                                #     for v, vert in enumerate(poly.vertices):
-                                #         loop_index = poly.loop_indices[v]
-                                #
-                                #         # print(f"loop_index: {loop_index}")
-                                #         # print(f"vert: {vert}")
-                                #
-                                #         color_layer.data[loop_index].color = (color_array[vert][0] / 255, color_array[vert][1] / 255, color_array[vert][2] / 255, 1)
+                                color_layer = new_object.data.vertex_colors.new(name="Color")
+                                new_object.data.vertex_colors.active = color_layer
+                                #print(f"color_array: {len(color_array)}")
+                                #print(f"polygons: {len(new_object.data.polygons)}")
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    #print(f"poly: {i}")
+                                    for v, vert in enumerate(poly.vertices):
+                                        loop_index = poly.loop_indices[v]
+                                
+                                        #print(f"loop_index: {loop_index}")
+                                        #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
+                                
+                                        color_layer.data[loop_index].color = (color_array[vert][0], color_array[vert][1], color_array[vert][2], 255)
 
                                 for mat in materials:
                                     new_object.data.materials.append(mat)
@@ -4491,6 +4515,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 new_object.data.normals_split_custom_set_from_vertices(normal_array)
                                 # add object to scene collection
                                 new_collection.objects.link(new_object)
+
+    
 
 
 
