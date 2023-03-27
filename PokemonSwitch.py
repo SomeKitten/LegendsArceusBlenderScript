@@ -328,6 +328,8 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                     trskl_bone_struct_ptr_bone_merge = readshort(trskl)
                     trskl_bone_struct_ptr_h = readshort(trskl)
 
+                print(f'{str(trskl_bone_struct_ptr_parent)} {str(trskl_bone_struct_ptr_rig_id)} {str(trskl_bone_struct_ptr_bone_merge)} {str(trskl_bone_struct_ptr_h)}')
+
                 if trskl_bone_struct_ptr_bone_merge != 0:
                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
                     bone_merge_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_merge_start)
@@ -462,6 +464,12 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                         new_bone.use_connect = False
                         new_bone.use_inherit_rotation = True
                         new_bone.use_inherit_scale = True
+                        
+                        #if trskl_bone_struct_ptr_h == 0:
+                        #    new_bone.use_inherit_scale = True
+                        #else:
+                        #     new_bone.use_inherit_scale = False
+                        
                         new_bone.use_local_location = True
 
                         new_bone.head = (0, 0, 0)
@@ -1406,7 +1414,10 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                         material.node_tree.links.new(haircolor.outputs[0], color_output)
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                     if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
+                        if mat["mat_enable_ao_map"]:
+                            material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
+                        else:
+                            material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color5.inputs[1])                   
 
                 if mat["mat_color1_r"] == (1.0) and mat["mat_color1_g"] == (1.0) and mat["mat_color1_b"] == (1.0):
                     color1 = mix_color1.inputs[0].links[0]
@@ -3686,7 +3697,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             material.node_tree.links.new(mix_color6.outputs[0], color_output)
                     if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
                         if color1 == (1.0, 1.0, 1.0, 1.0) and color2 == (1.0, 1.0, 1.0, 1.0) and color3 == (1.0, 1.0, 1.0, 1.0) and color4 == (1.0, 1.0, 1.0, 1.0):
-                            material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])                    
+                            if mat["mat_enable_ao_map"]:
+                                material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color6.inputs[1])
+                            else:
+                                material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color5.inputs[1])
 
                         
                 else:
