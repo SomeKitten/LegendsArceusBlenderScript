@@ -1889,13 +1889,13 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                             fseek(trmbf, vert_buffer_offset)
                             vert_buffer_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_struct)
                             vert_buffer_struct_len = readshort(trmbf)
-
+                            print(hex(vert_buffer_struct_len))
                             if vert_buffer_struct_len == 0x0008:
                                 vert_buffer_struct_section_length = readshort(trmbf)
                                 vert_buffer_struct_ptr_faces = readshort(trmbf)
                                 vert_buffer_struct_ptr_verts = readshort(trmbf)
                                 vert_buffer_struct_ptr_groups = 0
-                            if vert_buffer_struct_len == 0x000A:
+                            elif vert_buffer_struct_len == 0x000A:
                                 vert_buffer_struct_section_length = readshort(trmbf)
                                 vert_buffer_struct_ptr_faces = readshort(trmbf)
                                 vert_buffer_struct_ptr_verts = readshort(trmbf)
