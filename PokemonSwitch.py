@@ -1400,7 +1400,10 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                         ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + textureextension))
                     mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                     mix_color6.blend_type = "MULTIPLY"
-                    mix_color6.inputs[0].default_value = 1.0
+                    if mat["mat_ao0"][:-5] == "../../glb_share_tex/texture_white_ao/texture_white_ao":
+                        mix_color6.inputs[0].default_value = 0
+                    else:
+                        mix_color6.inputs[0].default_value = 1.0
                     if mix_color5 == True:
                         material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
                         material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
@@ -3686,7 +3689,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
                         mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                         mix_color6.blend_type = "MULTIPLY"
-                        mix_color6.inputs[0].default_value = 1.0
+                        if mat["mat_ao0"][:-5] == "../../glb_share_tex/texture_white_ao/texture_white_ao":
+                            mix_color6.inputs[0].default_value = 0
+                        else:
+                            mix_color6.inputs[0].default_value = 1.0
                         if mix_color5 == True:
                             material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
                             material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
@@ -3770,7 +3776,10 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
                         mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
                         mix_color6.blend_type = "MULTIPLY"
-                        mix_color6.inputs[0].default_value = 1.0
+                        if mat["mat_ao0"][:-5] == "../../glb_share_tex/texture_white_ao/texture_white_ao":
+                            mix_color6.inputs[0].default_value = 0
+                        else:
+                            mix_color6.inputs[0].default_value = 1.0
                         material.node_tree.links.new(alb_image_texture.outputs[0], mix_color6.inputs[1])
                         material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
                         material.node_tree.links.new(mix_color6.outputs[0], color_output)
