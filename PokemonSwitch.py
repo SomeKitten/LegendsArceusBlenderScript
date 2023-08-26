@@ -64,6 +64,11 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             description="Uses rare material instead of normal one",
             default=False,
             )
+    bonestructh: BoolProperty(
+            name="Bone Extras (WIP)",
+            description="Bone Extras (WIP)",
+            default=False,
+            )
     def draw(self, context):
         layout = self.layout
 
@@ -75,6 +80,9 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         
         box = layout.box()
         box.prop(self, 'loadlods')
+
+        box = layout.box()
+        box.prop(self, 'bonestructh')
         
         
     def execute(self, context):
@@ -82,7 +90,7 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
         if self.multiple == False:
             filename = os.path.basename(self.filepath)        
             f = open(os.path.join(directory, filename), "rb")
-            from_trmdlsv(directory, f, self.rare, self.loadlods)
+            from_trmdlsv(directory, f, self.rare, self.loadlods, self.bonestructh)
             f.close()
             return {'FINISHED'}  
         else:
@@ -90,11 +98,11 @@ class PokeSVImport(bpy.types.Operator, ImportHelper):
             obj_list = [item for item in file_list if item.endswith('.trmdl')]
             for item in obj_list:
                 f = open(os.path.join(directory, item), "rb")
-                from_trmdlsv(directory, f, self.rare, self.loadlods)
+                from_trmdlsv(directory, f, self.rare, self.loadlods, self.bonestructh)
                 f.close()
             return {'FINISHED'}
 
-def from_trmdlsv(filep, trmdl, rare, loadlods):
+def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
     # make collection
     if IN_BLENDER_ENV:
         new_collection = bpy.data.collections.new(os.path.basename(trmdl.name[:-6]))
@@ -106,7 +114,6 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
 
     materials = []
     bone_structure = None
-
     trskl = None
     trmsh = None
     trmtr = None
@@ -465,10 +472,11 @@ def from_trmdlsv(filep, trmdl, rare, loadlods):
                         new_bone.use_inherit_rotation = True
                         new_bone.use_inherit_scale = True
                         
-                        #if trskl_bone_struct_ptr_h == 0:
-                        #    new_bone.use_inherit_scale = True
-                        #else:
-                        #     new_bone.use_inherit_scale = False
+                        if bonestructh == True:
+                            if trskl_bone_struct_ptr_h == 0:
+                                new_bone.use_inherit_scale = True
+                            else:
+                                new_bone.use_inherit_scale = False
                         
                         new_bone.use_local_location = True
 
