@@ -1804,14 +1804,18 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                                 if vert_buff_param_format == 0x14:
                                                     print("vert_buff_param_format0x14 confirmed")
                                                     colors_fmt = "4BytesAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                                elif vert_buff_param_format == 0x16:
+                                                    colors_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
                                                 elif vert_buff_param_format == 0x36:
                                                     print("vert_buff_param_format0x36 confirmed")
                                                     colors_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
-                                                    raise AssertionError("Unexpected colors format!")
+                                                    raise AssertionError(hex(vert_buff_param_format))
                                             elif vert_buff_param_layer == 1:
                                                 if vert_buff_param_format == 0x14:
                                                     colors2_fmt = "4BytesAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                                elif vert_buff_param_format == 0x16:
+                                                    colors_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
                                                 elif vert_buff_param_format == 0x36:
                                                     colors2_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
@@ -1854,10 +1858,12 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected weights layer!")
 
-                                            if vert_buff_param_format != 0x27:
-                                                raise AssertionError("Unexpected weights format!")
-
-                                            weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                            ##if vert_buff_param_format != 0x27:
+                                            ##    raise AssertionError("Unexpected weights format!")
+                                            if vert_buff_param_format == 0x16:
+                                                weights_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                            else:
+                                                weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
                                         elif vert_buff_param_type == 0x09:
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected ?????? layer!")
@@ -2385,14 +2391,13 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                 #print(f"color_array: {len(color_array)}")
                                 #print(f"polygons: {len(new_object.data.polygons)}")
                                 for i, poly in enumerate(new_object.data.polygons):
-                                    #print(f"poly: {i}")
+                                    print(f"poly: {i}")
                                     for v, vert in enumerate(poly.vertices):
                                         loop_index = poly.loop_indices[v]
                                 
                                         #print(f"loop_index: {loop_index}")
-                                        #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
-                                
-                                        color_layer.data[loop_index].color = (color_array[vert][0], color_array[vert][1], color_array[vert][2], 255)
+                                        print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
+                                        color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
                                     new_object.data.materials.append(mat)
@@ -4319,7 +4324,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                                     colorr = readbyte(trmbf)
                                                     colorg = readbyte(trmbf)
                                                     colorb = readbyte(trmbf)
-                                                    colora = readbyte(trmbf)
+                                                    colora = float(readbyte(trmbf)) / 255
                                                 elif poly_group_array[x]["colors_fmt"] == "4Floats":
                                                     colorr = readfloat(trmbf) * 255
                                                     colorg = readfloat(trmbf) * 255
@@ -4511,7 +4516,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                         #print(f"loop_index: {loop_index}")
                                         #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
                                 
-                                        color_layer.data[loop_index].color = (color_array[vert][0], color_array[vert][1], color_array[vert][2], 255)
+                                        color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
                                     new_object.data.materials.append(mat)
