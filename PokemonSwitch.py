@@ -2391,12 +2391,12 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                 #print(f"color_array: {len(color_array)}")
                                 #print(f"polygons: {len(new_object.data.polygons)}")
                                 for i, poly in enumerate(new_object.data.polygons):
-                                    print(f"poly: {i}")
+                                    #print(f"poly: {i}")
                                     for v, vert in enumerate(poly.vertices):
                                         loop_index = poly.loop_indices[v]
                                 
                                         #print(f"loop_index: {loop_index}")
-                                        print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
+                                        #print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
                                         color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
