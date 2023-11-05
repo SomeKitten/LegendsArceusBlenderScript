@@ -2397,6 +2397,8 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                 
                                         #print(f"loop_index: {loop_index}")
                                         #print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
+                                        if alpha_array[vert] == 0:
+                                            alpha_array[vert] = 1
                                         color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
@@ -4515,7 +4517,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 
                                         #print(f"loop_index: {loop_index}")
                                         #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
-                                
+                                        if alpha_array[vert] == 0:
+                                            alpha_array[vert] = 1
                                         color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
