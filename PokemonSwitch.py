@@ -335,7 +335,7 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                     trskl_bone_struct_ptr_bone_merge = readshort(trskl)
                     trskl_bone_struct_ptr_h = readshort(trskl)
 
-                print(f'{str(trskl_bone_struct_ptr_parent)} {str(trskl_bone_struct_ptr_rig_id)} {str(trskl_bone_struct_ptr_bone_merge)} {str(trskl_bone_struct_ptr_h)}')
+
 
                 if trskl_bone_struct_ptr_bone_merge != 0:
                     fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
@@ -449,9 +449,10 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                         bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
                     if trskl_bone_struct_ptr_parent != 0x00:
                         fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-                        bone_parent = readlong(trskl)
+                        bone_parent = readlong(trskl) + 1
                     else:
                         bone_parent = 0
+                    print(bone_parent)
                     if trskl_bone_struct_ptr_rig_id != 0:
                         fseek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
                         bone_rig_id = readlong(trskl) + trskl_bone_adjust
@@ -485,8 +486,8 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                         new_bone.matrix = bone_matrix
 
                         if bone_parent != 0:
-                            new_bone.parent = bone_array[bone_parent]
-                            new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
+                            new_bone.parent = bone_array[bone_parent - 1]
+                            new_bone.matrix = bone_array[bone_parent - 1].matrix @ bone_matrix
 
                         if bone_name in bone_rig_array:
                             bone_id_map[bone_rig_array.index(bone_name)] = bone_name
@@ -2397,6 +2398,7 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                                 
                                         #print(f"loop_index: {loop_index}")
                                         #print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
+                                        
                                         if alpha_array[vert] == 0:
                                             alpha_array[vert] = 1
                                         color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
@@ -2769,7 +2771,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
                     if trskl_bone_struct_ptr_parent != 0x00:
                         fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-                        bone_parent = readlong(trskl)
+                        bone_parent = readlong(trskl) + 1
                     else:
                         bone_parent = 0
                     if trskl_bone_struct_ptr_rig_id != 0:
@@ -2798,8 +2800,8 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         new_bone.matrix = bone_matrix
 
                         if bone_parent != 0:
-                            new_bone.parent = bone_array[bone_parent]
-                            new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
+                            new_bone.parent = bone_array[bone_parent - 1]
+                            new_bone.matrix = bone_array[bone_parent - 1].matrix @ bone_matrix
 
                         if bone_name in bone_rig_array:
                             bone_id_map[bone_rig_array.index(bone_name)] = bone_name
@@ -4517,8 +4519,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                                 
                                         #print(f"loop_index: {loop_index}")
                                         #print((color_array[vert][0], color_array[vert][1], color_array[vert][2], 1))
-                                        if alpha_array[vert] == 0:
-                                            alpha_array[vert] = 1
+                                
                                         color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
 
                                 for mat in materials:
