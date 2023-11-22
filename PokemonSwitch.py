@@ -1189,27 +1189,7 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                     
                 material.use_backface_culling = True
                 
-                uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
-                separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
-    
-                math_multiply1 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply1.operation = "MULTIPLY"
-                math_multiply1.inputs[1].default_value = mat["mat_uv_scale_u"]
-    
-                math_multiply2 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply2.operation = "MULTIPLY"
-                math_multiply2.inputs[1].default_value = mat["mat_uv_scale_v"]
-    
-                math_ping_pong = material.node_tree.nodes.new("ShaderNodeMath")
-                math_ping_pong.operation = "PINGPONG"
-                math_ping_pong.inputs[1].default_value = 1.0
-    
-                combine_xyz = material.node_tree.nodes.new("ShaderNodeCombineXYZ")
-                
-                material.node_tree.links.new(uv_map.outputs[0], separate_xyz.inputs[0])
-                material.node_tree.links.new(separate_xyz.outputs[0], math_multiply1.inputs[0])
-                material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
-                material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
+
                 
                 basecolor = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
                 # LAYER MASK MAP
@@ -1324,9 +1304,6 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                 material.node_tree.links.new(separate_color.outputs[2], mix_emcolor3.inputs[0])
                 material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_emcolor4.inputs[0])
     
-                material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
-                material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
-                material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
                 
                 
                 if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
@@ -1334,7 +1311,6 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                     alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                     material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
                     material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
-                    material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0])
                     if 'hair' in mat["mat_name"] in mat["mat_name"] and basecolor != (1, 1, 1, 1):
                         haircolor = material.node_tree.nodes.new("ShaderNodeMixRGB")
                         haircolor.blend_type = "MULTIPLY"
@@ -1401,7 +1377,6 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
                         roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                     material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
-                    material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
                     
                 if mat["mat_enable_ao_map"]:
                     ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -3494,28 +3469,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     material.node_tree.links.new(reflectionpart4.outputs[0], reflectionpart5.inputs[0])
                     
                 material.use_backface_culling = True
-                
-                uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
-                separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
-    
-                math_multiply1 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply1.operation = "MULTIPLY"
-                math_multiply1.inputs[1].default_value = mat["mat_uv_scale_u"]
-    
-                math_multiply2 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply2.operation = "MULTIPLY"
-                math_multiply2.inputs[1].default_value = mat["mat_uv_scale_v"]
-    
-                math_ping_pong = material.node_tree.nodes.new("ShaderNodeMath")
-                math_ping_pong.operation = "PINGPONG"
-                math_ping_pong.inputs[1].default_value = 1.0
-    
-                combine_xyz = material.node_tree.nodes.new("ShaderNodeCombineXYZ")
-                
-                material.node_tree.links.new(uv_map.outputs[0], separate_xyz.inputs[0])
-                material.node_tree.links.new(separate_xyz.outputs[0], math_multiply1.inputs[0])
-                material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
-                material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
+
                     
                 if chara_check == "Pokemon" or mat["mat_name"] == "eye":
                     # LAYER MASK MAP
@@ -3623,9 +3577,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                     material.node_tree.links.new(separate_color.outputs[2], mix_emcolor3.inputs[0])
                     material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_emcolor4.inputs[0])
     
-                    material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
-                    material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
-                    material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
                 
                     
                     if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
@@ -3633,7 +3584,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                         alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
                         material.node_tree.links.new(alb_image_texture.outputs[0], mix_color1.inputs[1])
                         material.node_tree.links.new(alb_image_texture.outputs[1],  principled_bsdf.inputs[21])
-                        material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
 
                     if mat["mat_enable_highlight_map"]:
                         highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
@@ -3697,7 +3647,6 @@ def from_trmdl(filep, trmdl, rare, loadlods):
                             roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
                             roughness_image_texture.image.colorspace_settings.name = "Non-Color"
                         material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
-                        material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
                         
                     if mat["mat_enable_ao_map"]:
                         ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
