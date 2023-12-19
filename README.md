@@ -8,7 +8,7 @@ The formatting of this script is a bit wonky, but that's because I wanted to mak
 look as close to the original maxscript as possible.
 That way, it's easier to compare the two and see what's different.
 
-Pokémon Scarlet Violet Raw Files with PNGs
+Pokémon Scarlet Violet Raw Files with PNGs (Only Pokémon)
 
 DLC1 https://drive.google.com/file/d/1_GfWMWNc00uYTMPxn5F8RHtG37HLTlfZ/view?usp=sharing
 
