@@ -10,6 +10,8 @@ That way, it's easier to compare the two and see what's different.
 
 Pokémon Scarlet Violet Raw Files with PNGs (Only Pokémon)
 
+Unique Trainers (model_uq) https://drive.google.com/file/d/10BeIPdE5Yw_lJPHMLd00l6UR8Ujn3Hpf/view?usp=sharing
+
 DLC1 https://drive.google.com/file/d/1_GfWMWNc00uYTMPxn5F8RHtG37HLTlfZ/view?usp=sharing
 
 DLC2 https://drive.google.com/file/d/19d0cWGC4ruQ2mvmkqEMgpkrlXeZaUYNN/view?usp=sharing
