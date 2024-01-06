@@ -123,7 +123,7 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh):
     bone_id_map = {}
     bone_rig_array = []
     trskl_bone_adjust = 0
-    CharaCheck = "None"
+    chara_check = "None"
 
     print("Parsing TRMDL...")
 
@@ -2493,7 +2493,7 @@ def from_trmdl(filep, trmdl, rare, loadlods):
     bone_id_map = {}
     bone_rig_array = []
     trskl_bone_adjust = 0
-    CharaCheck = "None"
+    chara_check = "None"
 
     print("Parsing TRMDL...")
 
