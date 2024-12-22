@@ -1,14 +1,3 @@
-bl_info = {
-    "name": "Pokémon Switch V2 (.TRMDL)",
-    "author": "Scarlett/SomeKitten & ElChicoEevee",
-    "version": (2, 0, 0),
-    "blender": (3, 3, 0),
-    "location": "File > Import",
-    "description": "Blender addon for import Pokémon Switch TRMDL",
-    "warning": "",
-    "category": "Import",
-}
-
 import os
 from os import path
 import os.path
@@ -34,86 +23,24 @@ import shutil
 import sys
 import numpy as np
 import requests
+sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from Titan.Model.TRMDL import TRMDL
+from Titan.Model.TRSKL import TRSKL
 
-# READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
+import flatbuffers
 IN_BLENDER_ENV = True
 blender_version = bpy.app.version
 
-class PokeSVImport(bpy.types.Operator, ImportHelper):
-    bl_idname = "custom_import_scene.pokemonscarletviolet"
-    bl_label = "Import"
-    bl_options = {'PRESET', 'UNDO'}
-    filename_ext = ".trmdl"
-    filter_glob: StringProperty(
-            default="*.trmdl",
-            options={'HIDDEN'},
-            maxlen=255,
-    )
-    filepath = bpy.props.StringProperty(subtype='FILE_PATH',)
-    files = CollectionProperty(type=bpy.types.PropertyGroup)
-    rare: BoolProperty(
-            name="Load Shiny",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
-    multiple: BoolProperty(
-            name="Load All Folder",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
-    loadlods: BoolProperty(
-            name="Load LODS",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
-    bonestructh: BoolProperty(
-            name="Bone Extras (WIP)",
-            description="Bone Extras (WIP)",
-            default=False,
-            )
-    def draw(self, context):
-        layout = self.layout
-
-        box = layout.box()
-        box.prop(self, 'rare')
-        
-        box = layout.box()
-        box.prop(self, 'multiple')
-        
-        box = layout.box()
-        box.prop(self, 'loadlods')
-
-        box = layout.box()
-        box.prop(self, 'bonestructh')
-        
-        
-    def execute(self, context):
-        directory = os.path.dirname(self.filepath)
-        if self.multiple == False:
-            filename = os.path.basename(self.filepath)        
-            f = open(os.path.join(directory, filename), "rb")
-            from_trmdlsv(directory, f, self.rare, self.loadlods, self.bonestructh)
-            f.close()
-            return {'FINISHED'}  
-        else:
-            file_list = sorted(os.listdir(directory))
-            obj_list = [item for item in file_list if item.endswith('.trmdl')]
-            for item in obj_list:
-                f = open(os.path.join(directory, item), "rb")
-                from_trmdlsv(directory, f, self.rare, self.loadlods, self.bonestructh)
-                f.close()
-            return {'FINISHED'}
-
-def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh = False):
+def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     # make collection
     if IN_BLENDER_ENV:
-        new_collection = bpy.data.collections.new(os.path.basename(trmdl.name[:-6]))
+        new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
         bpy.context.scene.collection.children.link(new_collection)
 
 
     textureextension = ".png"
 
-
+    trsklmapped = []
     materials = []
     bone_structure = None
     trskl = None
@@ -122,308 +49,117 @@ def from_trmdlsv(filep, trmdl, rare, loadlods, bonestructh = False):
     
     trmsh_lods_array = []
     bone_array = []
-    bone_id_map = {}
+    bone_id_map = [None] * 1000
     bone_rig_array = []
     trskl_bone_adjust = 0
     chara_check = "None"
-
-    print("Parsing TRMDL...")
-
-    trmdl_file_start = readlong(trmdl); fseek(trmdl, trmdl_file_start)
-    trmdl_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trmdl_struct)
-    trmdl_struct_len = readshort(trmdl)
-
-
-    if trmdl_struct_len == 0x0012:
-        trmdl_struct_section_len = readshort(trmdl)
-        trmdl_struct_start = readshort(trmdl)
-        trmdl_struct_trmsh = readshort(trmdl)
-        trmdl_struct_trskl = readshort(trmdl)
-        trmdl_struct_trmtr = readshort(trmdl)
-        trmdl_struct_custom = readshort(trmdl)
-        trmdl_struct_bound_box = readshort(trmdl)
-        trmdl_struct_float = readshort(trmdl)
-    elif trmdl_struct_len == 0x0014: #ScarletViolet Only
-        trmdl_struct_section_len = readshort(trmdl)
-        trmdl_struct_start = readshort(trmdl)
-        trmdl_struct_trmsh = readshort(trmdl)
-        trmdl_struct_trskl = readshort(trmdl)
-        trmdl_struct_trmtr = readshort(trmdl)
-        trmdl_struct_custom = readshort(trmdl)
-        trmdl_struct_bound_box = readshort(trmdl)
-        trmdl_struct_float = readshort(trmdl)
-        trmdl_struct_trltt = readshort(trmdl)
-    elif trmdl_struct_len == 0x0018: #ScarletViolet Only
-        trmdl_struct_section_len = readshort(trmdl)
-        trmdl_struct_start = readshort(trmdl)
-        trmdl_struct_trmsh = readshort(trmdl)
-        trmdl_struct_trskl = readshort(trmdl)
-        trmdl_struct_trmtr = readshort(trmdl)
-        trmdl_struct_custom = readshort(trmdl)
-        trmdl_struct_bound_box = readshort(trmdl)
-        trmdl_struct_float = readshort(trmdl)
-        trmdl_struct_trltt = readshort(trmdl)
-        trmdl_struct_unka = readshort(trmdl)
-        trmdl_struct_unkb = readshort(trmdl)
+    with open(os.path.join(filep, trmdlname), "rb") as f:
+        trmdl_content = f.read()
+        buf = bytearray(trmdl_content)
+    trmdl = TRMDL.GetRootAsTRMDL(buf, 0)
+    trmsh_count = trmdl.MeshesLength()
+    trmtr_name = trmdl.Materials(0).decode('utf-8')
+    if rare == True:
+        trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
     else:
-        raise AssertionError("Unexpected TRMDL header struct length!")
-
-    if trmdl_struct_trmsh != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trmsh)
-        trmsh_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trmsh_start)
-        trmsh_count = readlong(trmdl)
-        for x in range(trmsh_count):
-            trmsh_offset = ftell(trmdl) + readlong(trmdl)
-            trmsh_ret = ftell(trmdl)
-            fseek(trmdl, trmsh_offset)
-            trmsh_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trmsh_struct)
-            trmsh_struct_len = readshort(trmdl)
-
-            if trmsh_struct_len != 0x0006:
-                raise AssertionError("Unexpected TRMSH struct length!")
-
-            trmsh_struct_section_len = readshort(trmdl)
-            trmsh_struct_ptr_name = readshort(trmdl)
-
-            if trmsh_struct_ptr_name != 0:
-                fseek(trmdl, trmsh_offset + trmsh_struct_ptr_name)
-                trmsh_name_offset = ftell(trmdl) + readlong(trmdl)
-                fseek(trmdl, trmsh_name_offset)
-                trmsh_name_len = readlong(trmdl)
-                chara_check = readfixedstring(trmdl, 3); fseek(trmdl, ftell(trmdl) - 3)
-                trmsh_name = readfixedstring(trmdl, trmsh_name_len)
-
-                if trmsh_name.startswith(('au_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('bu_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('cf_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('cm_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('df_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('dm_')): chara_check = "CommonNPC"
-                elif trmsh_name.startswith(('p1_drs')): chara_check = "SVProtag"
-                elif trmsh_name.startswith(('p2_drs')): chara_check = "SVProtag"
-                elif trmsh_name.startswith(('pm')): chara_check = "Pokemon"
-                elif trmsh_name.startswith(('p0')): chara_check = "SVProtag"
-                else: chara_check = "None"
-                print(trmsh_name)
-                print(chara_check)
-                trmsh_lods_array.append(trmsh_name)
-            fseek(trmdl, trmsh_ret)
-
-    if trmdl_struct_trskl != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trskl)
-        trskl_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trskl_start)
-        trskl_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trskl_struct)
-        trskl_struct_len = readshort(trmdl)
-
-        if trskl_struct_len != 0x0006:
-            raise AssertionError("Unexpected TRSKL struct length!")
-
-        trskl_struct_section_len = readshort(trmdl)
-        trskl_struct_ptr_name = readshort(trmdl)
-
-        if trskl_struct_ptr_name != 0:
-            fseek(trmdl, trskl_start + trskl_struct_ptr_name)
-            trskl_name_offset = ftell(trmdl) + readlong(trmdl)
-            fseek(trmdl, trskl_name_offset)
-            trskl_name_len = readlong(trmdl)
-            trskl_name = readfixedstring(trmdl, trskl_name_len)
-            print(trskl_name)
-
-            if os.path.exists(os.path.join(filep, trskl_name)):
-                trskl = open(os.path.join(filep, trskl_name), "rb")
-            else:
-                print(f"Can't find {trskl_name}!")
-
-    if trmdl_struct_trmtr != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trmtr)
-        trmtr_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trmtr_start)
-        trmtr_count = readlong(trmdl)
-        for x in range(trmtr_count):
-            trmtr_offset = ftell(trmdl) + readlong(trmdl)
-            trmtr_ret = ftell(trmdl)
-            fseek(trmdl, trmtr_offset)
-            trmtr_name_len = readlong(trmdl)  #  - 6 -- dunno why the extension was excluded
-            trmtr_name = readfixedstring(trmdl, trmtr_name_len)
-            # TODO ArceusShiny
-            # LINE 1227
-            print(trmtr_name)
-            if x == 0:
-                if rare == True:
-                    trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
-                else:
-                    trmtr = open(os.path.join(filep, trmtr_name), "rb") 
-            fseek(trmdl, trmtr_ret)
-    fclose(trmdl)
-    print(chara_check)
+        trmtr = open(os.path.join(filep, trmtr_name), "rb") 
+    trmsh = trmdl.Meshes(0).Filename().decode('utf-8')
+    trmsh_lod1 = trmdl.Meshes(1).Filename().decode('utf-8')
+    trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
+    trmsh_lods_array = [trmsh, trmsh_lod1, trmsh_lod2]
+    trskl = trmdl.Skeleton().Filename().decode('utf-8')
+    if trmsh.startswith(('au_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('bu_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('cf_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('cm_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('df_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('dm_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('p1_drs')): chara_check = "SVProtag"
+    elif trmsh.startswith(('p2_drs')): chara_check = "SVProtag"
+    elif trmsh.startswith(('pm')): chara_check = "Pokemon"
+    elif trmsh.startswith(('p0')): chara_check = "SVProtag"
+    else: chara_check = "None"
+    print("Parsing TRMDL...")
     if chara_check == "SVProtag":
-        trskl = open(os.path.join(filep, "../../model_pc_base/model/p0_base.trskl"), "rb")
+        trskl = "../../model_pc_base/model/p0_base.trskl"
     
     if trskl is not None:
         print("Parsing TRSKL...")
-        trskl_file_start = readlong(trskl)
-        fseek(trskl, trskl_file_start)
-        trskl_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_struct)
-        trskl_struct_len = readshort(trskl)
-        if trskl_struct_len == 0x000C:
-            trskl_struct_section_len = readshort(trskl)
-            trskl_struct_start = readshort(trskl)
-            trskl_struct_bone = readshort(trskl)
-            trskl_struct_b = readshort(trskl)
-            trskl_struct_c = readshort(trskl)
-            trskl_struct_bone_adjust = 0
-        elif trskl_struct_len == 0x000E:
-            trskl_struct_section_len = readshort(trskl)
-            trskl_struct_start = readshort(trskl)
-            trskl_struct_bone = readshort(trskl)
-            trskl_struct_b = readshort(trskl)
-            trskl_struct_c = readshort(trskl)
-            trskl_struct_bone_adjust = readshort(trskl)
-        else:
-            raise AssertionError("Unexpected TRSKL header struct length!")
+        with open(os.path.join(filep, trskl), "rb") as f:
+            trskl_content = f.read()
+            buf = bytearray(trskl_content)
+        trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+    
+        # Retrieve transform nodes and bones
+        transform_nodes = []
+        for i in range(trskl.TransformNodesLength()):
+            node = trskl.TransformNodes(i)
+            transform_nodes.append({
+                "name": node.Name().decode('utf-8'),
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": node.ParentIdx() + 1,
+                "rig_idx": node.RigIdx(),
+            })
+    
+        bones = []
+        for i in range(trskl.BonesLength()):
+            bone = trskl.Bones(i)
+            bones.append({
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning(),
+            })
+        
 
-        if trskl_struct_bone_adjust != 0:
-            fseek(trskl, trskl_file_start + trskl_struct_bone_adjust)
-            trskl_bone_adjust = readlong(trskl); print(f"Mesh node IDs start at {trskl_bone_adjust}")
-
-        if trskl_struct_bone != 0:
-            fseek(trskl, trskl_file_start + trskl_struct_bone)
-            trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
-            bone_count = readlong(trskl)
+            
+        if IN_BLENDER_ENV:
+            new_armature = bpy.data.armatures.new(trmdlname[:-6])
+            bone_structure = bpy.data.objects.new(trmdlname[:-6], new_armature)
+            new_collection.objects.link(bone_structure)
+            bpy.context.view_layer.objects.active = bone_structure
+            bpy.ops.object.editmode_toggle()
+        for node in transform_nodes:
+            rig_idx = node["rig_idx"]
+            bone = bones[rig_idx] if rig_idx >= 0 and rig_idx < len(bones) else None
+            trsklmapped.append({
+                "transform_node": node,
+                "bone": bone
+            })
+        for entry in trsklmapped:
+            bone_matrix = mathutils.Matrix.LocRotScale(
+                (entry["transform_node"]["VecTranslateX"], entry["transform_node"]["VecTranslateY"], entry["transform_node"]["VecTranslateZ"]),
+                mathutils.Euler((entry["transform_node"]["VecRotX"], entry["transform_node"]["VecRotY"], entry["transform_node"]["VecRotZ"])),
+                (entry["transform_node"]["VecScaleX"], entry["transform_node"]["VecScaleY"], entry["transform_node"]["VecScaleZ"]))
             
             if IN_BLENDER_ENV:
-                new_armature = bpy.data.armatures.new(os.path.basename(trmdl.name))
-                bone_structure = bpy.data.objects.new(os.path.basename(trmdl.name), new_armature)
-                new_collection.objects.link(bone_structure)
-                bpy.context.view_layer.objects.active = bone_structure
-                bpy.ops.object.editmode_toggle()
-            
-            for x in range(bone_count):
-                bone_offset = ftell(trskl) + readlong(trskl)
-                bone_ret = ftell(trskl)
-                fseek(trskl, bone_offset)
-                trskl_bone_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_bone_struct)
-                trskl_bone_struct_len = readshort(trskl)
-
-                if trskl_bone_struct_len == 0x0012:
-                    trskl_bone_struct_ptr_section_len = readshort(trskl)
-                    trskl_bone_struct_ptr_string = readshort(trskl)
-                    trskl_bone_struct_ptr_bone = readshort(trskl)
-                    trskl_bone_struct_ptr_c = readshort(trskl)
-                    trskl_bone_struct_ptr_d = readshort(trskl)
-                    trskl_bone_struct_ptr_parent = readshort(trskl)
-                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
-                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-                    trskl_bone_struct_ptr_h = 0
-                elif trskl_bone_struct_len == 0x0014:
-                    trskl_bone_struct_ptr_section_len = readshort(trskl)
-                    trskl_bone_struct_ptr_string = readshort(trskl)
-                    trskl_bone_struct_ptr_bone = readshort(trskl)
-                    trskl_bone_struct_ptr_c = readshort(trskl)
-                    trskl_bone_struct_ptr_d = readshort(trskl)
-                    trskl_bone_struct_ptr_parent = readshort(trskl)
-                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
-                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-                    trskl_bone_struct_ptr_h = readshort(trskl)
-                else:
-                    trskl_bone_struct_ptr_section_len = readshort(trskl)
-                    trskl_bone_struct_ptr_string = readshort(trskl)
-                    trskl_bone_struct_ptr_bone = readshort(trskl)
-                    trskl_bone_struct_ptr_c = readshort(trskl)
-                    trskl_bone_struct_ptr_d = readshort(trskl)
-                    trskl_bone_struct_ptr_parent = readshort(trskl)
-                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
-                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-                    trskl_bone_struct_ptr_h = readshort(trskl)
-
-
-
-                if trskl_bone_struct_ptr_bone_merge != 0:
-                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
-                    bone_merge_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_merge_start)
-                    bone_merge_string_len = readlong(trskl)
-                    if bone_merge_string_len != 0:
-                        bone_merge_string = readfixedstring(trskl, bone_merge_string_len)
-                    else: bone_merge_string = ""
-
-
-
-                if trskl_bone_struct_ptr_bone != 0:
-                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
-                    bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
-                    bone_pos_struct = ftell(trskl) - readlong(trskl); fseek(trskl, bone_pos_struct)
-                    bone_pos_struct_len = readshort(trskl)
-
-                    if bone_pos_struct_len != 0x000A:
-                        raise AssertionError("Unexpected bone position struct length!")
-
-                    bone_pos_struct_section_len = readshort(trskl)
-                    bone_pos_struct_ptr_scl = readshort(trskl)
-                    bone_pos_struct_ptr_rot = readshort(trskl)
-                    bone_pos_struct_ptr_trs = readshort(trskl)
-
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_trs)
-                    bone_tx = readfloat(trskl); bone_ty = readfloat(trskl); bone_tz = readfloat(trskl)
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_rot)
-                    bone_rx = readfloat(trskl); bone_ry = readfloat(trskl); bone_rz = readfloat(trskl)
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_scl)
-                    bone_sx = readfloat(trskl); bone_sy = readfloat(trskl); bone_sz = readfloat(trskl)
-
-                    if trskl_bone_struct_ptr_string != 0:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_string)
-                        bone_string_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_string_start)
-                        bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
-                    if trskl_bone_struct_ptr_parent != 0x00:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-                        bone_parent = readlong(trskl) + 1
-                    else:
-                        bone_parent = 0
-                    if trskl_bone_struct_ptr_rig_id != 0:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
-                        bone_rig_id = readlong(trskl) + trskl_bone_adjust
-
-                        while len(bone_rig_array) <= bone_rig_id:
-                            bone_rig_array.append("")
-                        bone_rig_array[bone_rig_id] = bone_name
-
-                    bone_matrix = mathutils.Matrix.LocRotScale(
-                        (bone_tx, bone_ty, bone_tz),
-                        mathutils.Euler((bone_rx, bone_ry, bone_rz)),
-                        (bone_sx, bone_sy, bone_sz))
-
-                    if IN_BLENDER_ENV:
-                        new_bone = new_armature.edit_bones.new(bone_name)
-                        new_bone["trskl_trans_x"] = bone_tx
-                        new_bone["trskl_trans_y"] = bone_ty
-                        new_bone["trskl_trans_z"] = bone_tz
-                        new_bone["trskl_rot"] = (bone_rx, bone_ry, bone_rz)
-                        new_bone["trskl_scale"] = (bone_sx, bone_sy, bone_sz)
-                        new_bone.use_connect = False
-                        new_bone.use_inherit_rotation = True
+                new_bone = new_armature.edit_bones.new(entry["transform_node"]["name"])
+                new_bone.use_connect = False
+                new_bone.use_inherit_rotation = True
+                if entry["bone"] != None:
+                    if entry["bone"]["inherit_scale"] == False:
                         if blender_version[0] == 4:
-                            new_bone.inherit_scale = 'NONE'
+                            new_bone.inherit_scale = 'FULL'
                         else:
-                            new_bone.use_inherit_scale = False
-                        
-                        new_bone.use_local_location = False
-                        new_bone.head = (0,0,0)
-                        new_bone.tail = (0,0,0.1)
-                        new_bone.matrix = bone_matrix
-
-                        if bone_parent != 0:
-                            new_bone.parent = bone_array[bone_parent - 1]
-                            new_bone.matrix = bone_array[bone_parent - 1].matrix @ bone_matrix
-
-                        if bone_name in bone_rig_array:
-                            bone_id_map[bone_rig_array.index(bone_name)] = bone_name
-                        else:
-                            bone_rig_array.append(bone_name)
-                            bone_id_map[len(bone_rig_array) - 1] = bone_name
-                        
-                        bone_array.append(new_bone)
+                            new_bone.use_inherit_scale = True
                 
-                fseek(trskl, bone_ret)
-        
-        fclose(trskl)
+                new_bone.head = (0,0,0)
+                new_bone.tail = (0, 0, 0.1)
+                new_bone.matrix = bone_matrix
+                
+                if entry["transform_node"]["parent_idx"] != 0:
+                    new_bone.parent = bone_array[entry["transform_node"]["parent_idx"] - 1]
+                    new_bone.matrix = bone_array[entry["transform_node"]["parent_idx"] - 1].matrix @ bone_matrix
+                if entry["transform_node"]["rig_idx"] >= 0:
+                    bone_id_map[entry["transform_node"]["rig_idx"]] = entry["transform_node"]["name"]
+                
+            bone_array.append(new_bone)
         if IN_BLENDER_ENV:
             bpy.ops.object.editmode_toggle()
     if trmtr is not None:
@@ -2209,17 +1945,3 @@ def ftell(file):
 
 def fclose(file):
     file.close()
-
-def menu_func_import(self, context):
-    self.layout.operator(PokeSVImport.bl_idname, text="Pokémon Trinity Model (.trmdl)")
-        
-def register():
-    bpy.utils.register_class(PokeSVImport)
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    
-def unregister():
-    bpy.utils.unregister_class(PokeSVImport)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-
-if __name__ == "__main__":
-    register()
