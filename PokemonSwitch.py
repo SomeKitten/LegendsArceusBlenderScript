@@ -1,15 +1,5 @@
-bl_info = {
-    "name": "Legends Arceus Importer (.TRMDL)",
-    "author": "Scarlett/SomeKitten & ElChicoEevee",
-    "version": (0, 0, 2),
-    "blender": (3, 3, 0),
-    "location": "File > Import-Export",
-    "description": "A tool designed to import LMD files from the mobile game Pokemon Masters",
-    "warning": "",
-    "category": "Import-Export",
-}
-
-
+import os
+from os import path
 import os.path
 import random
 import struct
@@ -21,320 +11,157 @@ from bpy.props import (BoolProperty,
                        CollectionProperty
                        )
 from bpy_extras.io_utils import ImportHelper
+from bpy.types import (
+        Operator,
+        OperatorFileListElement,
+        )
 import bpy
 import mathutils
 import math
+import glob
+import shutil
+import sys
+import numpy as np
+import requests
+sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from Titan.Model.TRMDL import TRMDL
+from Titan.Model.TRSKL import TRSKL
 
-# READ THIS: change to True when running in Blender, False when running using fake-bpy-module-latest
+import flatbuffers
 IN_BLENDER_ENV = True
-rare = False
-    
-class PokeArcImport(bpy.types.Operator, ImportHelper):
-    bl_idname = "custom_import_scene.pokemonlegendsarceus"
-    bl_label = "Import"
-    bl_options = {'PRESET', 'UNDO'}
-    filename_ext = ".trmdl"
-    filter_glob = StringProperty(
-            default="*.trmdl",
-            options={'HIDDEN'},
-            )
-    filepath = bpy.props.StringProperty(subtype='FILE_PATH',)
-    files = CollectionProperty(type=bpy.types.PropertyGroup)
-    rare: BoolProperty(
-            name="Load Shiny? (Currently Not Working, rename trmtr)",
-            description="Uses rare material instead of normal one",
-            default=False,
-            )
-    def draw(self, context):
-        layout = self.layout
+blender_version = bpy.app.version
 
-        box = layout.box()
-        box.prop(self, 'rare')
-
-    def execute(self, context):
-        filename = os.path.basename(self.filepath)
-        directory = os.path.dirname(self.filepath)
-        f = open(os.path.join(directory, filename), "rb")
-        from_trmdl(directory, f)
-        f.close()
-        return {'FINISHED'}    
-    
-def from_trmdl(filep, trmdl):
+def from_trmdlsv(filep, trmdlname, rare, loadlods, bonestructh = False):
     # make collection
     if IN_BLENDER_ENV:
-        new_collection = bpy.data.collections.new(os.path.basename(trmdl.name))
+        new_collection = bpy.data.collections.new(os.path.basename(trmdlname[:-6]))
         bpy.context.scene.collection.children.link(new_collection)
 
+
+    textureextension = ".png"
+
+    trsklmapped = []
     materials = []
     bone_structure = None
-
     trskl = None
     trmsh = None
     trmtr = None
     
     trmsh_lods_array = []
     bone_array = []
-    bone_id_map = {}
+    bone_id_map = [None] * 1000
     bone_rig_array = []
     trskl_bone_adjust = 0
-    CharaCheck = "None"
-
+    chara_check = "None"
+    with open(os.path.join(filep, trmdlname), "rb") as f:
+        trmdl_content = f.read()
+        buf = bytearray(trmdl_content)
+    trmdl = TRMDL.GetRootAsTRMDL(buf, 0)
+    trmsh_count = trmdl.MeshesLength()
+    trmtr_name = trmdl.Materials(0).decode('utf-8')
+    if rare == True:
+        trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
+    else:
+        trmtr = open(os.path.join(filep, trmtr_name), "rb") 
+    trmsh = trmdl.Meshes(0).Filename().decode('utf-8')
+    trmsh_lod1 = trmdl.Meshes(1).Filename().decode('utf-8')
+    trmsh_lod2 = trmdl.Meshes(2).Filename().decode('utf-8')
+    trmsh_lods_array = [trmsh, trmsh_lod1, trmsh_lod2]
+    trskl = trmdl.Skeleton().Filename().decode('utf-8')
+    if trmsh.startswith(('au_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('bu_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('cf_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('cm_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('df_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('dm_')): chara_check = "CommonNPC"
+    elif trmsh.startswith(('p1_drs')): chara_check = "SVProtag"
+    elif trmsh.startswith(('p2_drs')): chara_check = "SVProtag"
+    elif trmsh.startswith(('pm')): chara_check = "Pokemon"
+    elif trmsh.startswith(('p0')): chara_check = "SVProtag"
+    else: chara_check = "None"
     print("Parsing TRMDL...")
-
-    trmdl_file_start = readlong(trmdl); fseek(trmdl, trmdl_file_start)
-    trmdl_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trmdl_struct)
-    trmdl_struct_len = readshort(trmdl)
-
-    if trmdl_struct_len != 0x0012:
-        raise AssertionError("Unexpected TRMDL header struct length!")
-
-    trmdl_struct_section_len = readshort(trmdl)
-    trmdl_struct_start = readshort(trmdl)
-    trmdl_struct_trmsh = readshort(trmdl)
-    trmdl_struct_trskl = readshort(trmdl)
-    trmdl_struct_trmtr = readshort(trmdl)
-    trmdl_struct_custom = readshort(trmdl)
-    trmdl_struct_bound_box = readshort(trmdl)
-    trmdl_struct_float = readshort(trmdl)
-
-    if trmdl_struct_trmsh != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trmsh)
-        trmsh_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trmsh_start)
-        trmsh_count = readlong(trmdl)
-        for x in range(trmsh_count):
-            trmsh_offset = ftell(trmdl) + readlong(trmdl)
-            trmsh_ret = ftell(trmdl)
-            fseek(trmdl, trmsh_offset)
-            trmsh_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trmsh_struct)
-            trmsh_struct_len = readshort(trmdl)
-
-            if trmsh_struct_len != 0x0006:
-                raise AssertionError("Unexpected TRMSH struct length!")
-
-            trmsh_struct_section_len = readshort(trmdl)
-            trmsh_struct_ptr_name = readshort(trmdl)
-
-            if trmsh_struct_ptr_name != 0:
-                fseek(trmdl, trmsh_offset + trmsh_struct_ptr_name)
-                trmsh_name_offset = ftell(trmdl) + readlong(trmdl)
-                fseek(trmdl, trmsh_name_offset)
-                trmsh_name_len = readlong(trmdl)
-                chara_check = readfixedstring(trmdl, 3); fseek(trmdl, ftell(trmdl) - 3)
-
-                if chara_check.startswith(('au_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('bu_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('cf_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('cm_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('df_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('dm_')): chara_check = "CommonNPC"
-                elif chara_check.startswith(('p1_')): chara_check = "Rei"
-                elif chara_check.startswith(('p2_')): chara_check = "Akari"
-                elif chara_check.startswith(('pm')): chara_check = "Pokemon"
-                else: chara_check = "None"
-
-                trmsh_name = readfixedstring(trmdl, trmsh_name_len)
-                print(trmsh_name)
-                print(chara_check)
-                trmsh_lods_array.append(trmsh_name)
-            fseek(trmdl, trmsh_ret)
-
-    if trmdl_struct_trskl != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trskl)
-        trskl_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trskl_start)
-        trskl_struct = ftell(trmdl) - readlong(trmdl); fseek(trmdl, trskl_struct)
-        trskl_struct_len = readshort(trmdl)
-
-        if trskl_struct_len != 0x0006:
-            raise AssertionError("Unexpected TRSKL struct length!")
-
-        trskl_struct_section_len = readshort(trmdl)
-        trskl_struct_ptr_name = readshort(trmdl)
-
-        if trskl_struct_ptr_name != 0:
-            fseek(trmdl, trskl_start + trskl_struct_ptr_name)
-            trskl_name_offset = ftell(trmdl) + readlong(trmdl)
-            fseek(trmdl, trskl_name_offset)
-            trskl_name_len = readlong(trmdl)
-            trskl_name = readfixedstring(trmdl, trskl_name_len)
-            print(trskl_name)
-
-            if os.path.exists(os.path.join(filep, trskl_name)):
-                trskl = open(os.path.join(filep, trskl_name), "rb")
-            else:
-                print(f"Can't find {trskl_name}!")
-
-    if trmdl_struct_trmtr != 0:
-        fseek(trmdl, trmdl_file_start + trmdl_struct_trmtr)
-        trmtr_start = ftell(trmdl) + readlong(trmdl); fseek(trmdl, trmtr_start)
-        trmtr_count = readlong(trmdl)
-        for x in range(trmtr_count):
-            trmtr_offset = ftell(trmdl) + readlong(trmdl)
-            trmtr_ret = ftell(trmdl)
-            fseek(trmdl, trmtr_offset)
-            trmtr_name_len = readlong(trmdl)  #  - 6 -- dunno why the extension was excluded
-            trmtr_name = readfixedstring(trmdl, trmtr_name_len)
-            # TODO ArceusShiny
-            # LINE 1227
-            print(trmtr_name)
-            if x == 0:
-                if rare == True:
-                    trmtr = open(os.path.join(filep, Path(trmtr_name).stem + "_rare.trmtr"), "rb")
-                else:
-                    trmtr = open(os.path.join(filep, trmtr_name), "rb") 
-            fseek(trmdl, trmtr_ret)
-    fclose(trmdl)
-
-    # TODO create bone_rig_array
-    # LINE 1247
-
+    if chara_check == "SVProtag":
+        trskl = "../../model_pc_base/model/p0_base.trskl"
+    
     if trskl is not None:
         print("Parsing TRSKL...")
-        trskl_file_start = readlong(trskl)
-        fseek(trskl, trskl_file_start)
-        trskl_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_struct)
-        trskl_struct_len = readshort(trskl)
-        if trskl_struct_len == 0x000C:
-            trskl_struct_section_len = readshort(trskl)
-            trskl_struct_start = readshort(trskl)
-            trskl_struct_bone = readshort(trskl)
-            trskl_struct_b = readshort(trskl)
-            trskl_struct_c = readshort(trskl)
-            trskl_struct_bone_adjust = 0
-        elif trskl_struct_len == 0x000E:
-            trskl_struct_section_len = readshort(trskl)
-            trskl_struct_start = readshort(trskl)
-            trskl_struct_bone = readshort(trskl)
-            trskl_struct_b = readshort(trskl)
-            trskl_struct_c = readshort(trskl)
-            trskl_struct_bone_adjust = readshort(trskl)
-        else:
-            raise AssertionError("Unexpected TRSKL header struct length!")
+        with open(os.path.join(filep, trskl), "rb") as f:
+            trskl_content = f.read()
+            buf = bytearray(trskl_content)
+        trskl = TRSKL.GetRootAsTRSKL(buf, 0)
+    
+        # Retrieve transform nodes and bones
+        transform_nodes = []
+        for i in range(trskl.TransformNodesLength()):
+            node = trskl.TransformNodes(i)
+            transform_nodes.append({
+                "name": node.Name().decode('utf-8'),
+                "VecTranslateX": node.Transform().VecTranslate().X(),
+                "VecTranslateY": node.Transform().VecTranslate().Y(),
+                "VecTranslateZ": node.Transform().VecTranslate().Z(),
+                "VecScaleX": node.Transform().VecScale().X(),
+                "VecScaleY": node.Transform().VecScale().Y(),
+                "VecScaleZ": node.Transform().VecScale().Z(),
+                "VecRotX": node.Transform().VecRot().X(),
+                "VecRotY": node.Transform().VecRot().Y(),
+                "VecRotZ": node.Transform().VecRot().Z(),
+                "parent_idx": node.ParentIdx() + 1,
+                "rig_idx": node.RigIdx(),
+            })
+    
+        bones = []
+        for i in range(trskl.BonesLength()):
+            bone = trskl.Bones(i)
+            bones.append({
+                "inherit_scale": bone.InheritScale(),
+                "influence_skinning": bone.InfluenceSkinning(),
+            })
+        
 
-        if trskl_struct_bone_adjust != 0:
-            fseek(trskl, trskl_file_start + trskl_struct_bone_adjust)
-            trskl_bone_adjust = readlong(trskl); print(f"Mesh node IDs start at {trskl_bone_adjust}")
-
-        if trskl_struct_bone != 0:
-            fseek(trskl, trskl_file_start + trskl_struct_bone)
-            trskl_bone_start = ftell(trskl) + readlong(trskl); fseek(trskl, trskl_bone_start)
-            bone_count = readlong(trskl)
-
-            new_armature = bpy.data.armatures.new("Armature")
-            bone_structure = bpy.data.objects.new("Armature", new_armature)
+            
+        if IN_BLENDER_ENV:
+            new_armature = bpy.data.armatures.new(trmdlname[:-6])
+            bone_structure = bpy.data.objects.new(trmdlname[:-6], new_armature)
             new_collection.objects.link(bone_structure)
             bpy.context.view_layer.objects.active = bone_structure
             bpy.ops.object.editmode_toggle()
-
-            for x in range(bone_count):
-                bone_offset = ftell(trskl) + readlong(trskl)
-                bone_ret = ftell(trskl)
-                fseek(trskl, bone_offset)
-                print(f"Bone {x} start: {hex(bone_offset)}")
-                trskl_bone_struct = ftell(trskl) - readlong(trskl); fseek(trskl, trskl_bone_struct)
-                trskl_bone_struct_len = readshort(trskl)
-
-                if trskl_bone_struct_len == 0x0012:
-                    trskl_bone_struct_ptr_section_len = readshort(trskl)
-                    trskl_bone_struct_ptr_string = readshort(trskl)
-                    trskl_bone_struct_ptr_bone = readshort(trskl)
-                    trskl_bone_struct_ptr_c = readshort(trskl)
-                    trskl_bone_struct_ptr_d = readshort(trskl)
-                    trskl_bone_struct_ptr_parent = readshort(trskl)
-                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
-                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-                    trskl_bone_struct_ptr_h = 0
-                elif trskl_bone_struct_len == 0x0014:
-                    trskl_bone_struct_ptr_section_len = readshort(trskl)
-                    trskl_bone_struct_ptr_string = readshort(trskl)
-                    trskl_bone_struct_ptr_bone = readshort(trskl)
-                    trskl_bone_struct_ptr_c = readshort(trskl)
-                    trskl_bone_struct_ptr_d = readshort(trskl)
-                    trskl_bone_struct_ptr_parent = readshort(trskl)
-                    trskl_bone_struct_ptr_rig_id = readshort(trskl)
-                    trskl_bone_struct_ptr_bone_merge = readshort(trskl)
-                    trskl_bone_struct_ptr_h = readshort(trskl)
-                else:
-                    raise AssertionError("Unexpected TRSKL bone struct length!")
-
-                if trskl_bone_struct_ptr_bone_merge != 0:
-                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone_merge)
-                    bone_merge_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_merge_start)
-                    bone_merge_string_len = readlong(trskl)
-                    if bone_merge_string_len != 0:
-                        bone_merge_string = readfixedstring(trskl, bone_merge_string_len)
-                        print(f"BoneMerge to {bone_merge_string}")
-                    else: bone_merge_string = ""
-
-                if trskl_bone_struct_ptr_bone != 0:
-                    fseek(trskl, bone_offset + trskl_bone_struct_ptr_bone)
-                    bone_pos_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_pos_start)
-                    bone_pos_struct = ftell(trskl) - readlong(trskl); fseek(trskl, bone_pos_struct)
-                    bone_pos_struct_len = readshort(trskl)
-
-                    if bone_pos_struct_len != 0x000A:
-                        raise AssertionError("Unexpected bone position struct length!")
-
-                    bone_pos_struct_section_len = readshort(trskl)
-                    bone_pos_struct_ptr_scl = readshort(trskl)
-                    bone_pos_struct_ptr_rot = readshort(trskl)
-                    bone_pos_struct_ptr_trs = readshort(trskl)
-
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_trs)
-                    bone_tx = readfloat(trskl); bone_ty = readfloat(trskl); bone_tz = readfloat(trskl)
-                    # TODO ArceusScale
-                    # LINE 1797
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_rot)
-                    bone_rx = readfloat(trskl); bone_ry = readfloat(trskl); bone_rz = readfloat(trskl)
-                    fseek(trskl, bone_pos_start + bone_pos_struct_ptr_scl)
-                    bone_sx = readfloat(trskl); bone_sy = readfloat(trskl); bone_sz = readfloat(trskl)
-
-                    if trskl_bone_struct_ptr_string != 0:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_string)
-                        bone_string_start = ftell(trskl) + readlong(trskl); fseek(trskl, bone_string_start)
-                        bone_str_len = readlong(trskl); bone_name = readfixedstring(trskl, bone_str_len)
-                    if trskl_bone_struct_ptr_parent != 0x00:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_parent)
-                        bone_parent = readlong(trskl)
-                    else:
-                        bone_parent = 0
-                    if trskl_bone_struct_ptr_rig_id != 0:
-                        fseek(trskl, bone_offset + trskl_bone_struct_ptr_rig_id)
-                        bone_rig_id = readlong(trskl) + trskl_bone_adjust
-
-                        while len(bone_rig_array) <= bone_rig_id:
-                            bone_rig_array.append("")
-                        bone_rig_array[bone_rig_id] = bone_name
-
-                    bone_matrix = mathutils.Matrix.LocRotScale(
-                        (bone_tx, bone_ty, bone_tz),
-                        mathutils.Euler((bone_rx, bone_ry, bone_rz)),
-                        (bone_sx, bone_sy, bone_sz))
-
-                    new_bone = new_armature.edit_bones.new(bone_name)
-
-                    new_bone.use_connect = False
-                    new_bone.use_inherit_rotation = True
-                    new_bone.use_inherit_scale = True
-                    new_bone.use_local_location = True
-
-                    new_bone.head = (0, 0, 0)
-                    new_bone.tail = (0, 0, 0.1)
-                    new_bone.matrix = bone_matrix
-
-                    if bone_parent != 0:
-                        new_bone.parent = bone_array[bone_parent]
-                        new_bone.matrix = bone_array[bone_parent].matrix @ bone_matrix
-
-                    if bone_name in bone_rig_array:
-                        bone_id_map[bone_rig_array.index(bone_name)] = bone_name
-                    else:
-                        print(f"Bone {bone_name} not found in bone rig array!")
-                    bone_array.append(new_bone)
-
-                fseek(trskl, bone_ret)
-
-    fclose(trskl)
-
+        for node in transform_nodes:
+            rig_idx = node["rig_idx"]
+            bone = bones[rig_idx] if rig_idx >= 0 and rig_idx < len(bones) else None
+            trsklmapped.append({
+                "transform_node": node,
+                "bone": bone
+            })
+        for entry in trsklmapped:
+            bone_matrix = mathutils.Matrix.LocRotScale(
+                (entry["transform_node"]["VecTranslateX"], entry["transform_node"]["VecTranslateY"], entry["transform_node"]["VecTranslateZ"]),
+                mathutils.Euler((entry["transform_node"]["VecRotX"], entry["transform_node"]["VecRotY"], entry["transform_node"]["VecRotZ"])),
+                (entry["transform_node"]["VecScaleX"], entry["transform_node"]["VecScaleY"], entry["transform_node"]["VecScaleZ"]))
+            
+            if IN_BLENDER_ENV:
+                new_bone = new_armature.edit_bones.new(entry["transform_node"]["name"])
+                new_bone.use_connect = False
+                new_bone.use_inherit_rotation = True
+                if entry["bone"] != None:
+                    if entry["bone"]["inherit_scale"] == False:
+                        if blender_version[0] == 4:
+                            new_bone.inherit_scale = 'FULL'
+                        else:
+                            new_bone.use_inherit_scale = True
+                
+                new_bone.head = (0,0,0)
+                new_bone.tail = (0, 0, 0.1)
+                new_bone.matrix = bone_matrix
+                
+                if entry["transform_node"]["parent_idx"] != 0:
+                    new_bone.parent = bone_array[entry["transform_node"]["parent_idx"] - 1]
+                    new_bone.matrix = bone_array[entry["transform_node"]["parent_idx"] - 1].matrix @ bone_matrix
+                if entry["transform_node"]["rig_idx"] >= 0:
+                    bone_id_map[entry["transform_node"]["rig_idx"]] = entry["transform_node"]["name"]
+                
+            bone_array.append(new_bone)
+        if IN_BLENDER_ENV:
+            bpy.ops.object.editmode_toggle()
     if trmtr is not None:
         print("Parsing TRMTR...")
         trmtr_file_start = readlong(trmtr)
@@ -354,15 +181,26 @@ def from_trmdl(filep, trmdl):
             mat_start = ftell(trmtr) + readlong(trmtr); fseek(trmtr, mat_start)
             mat_count = readlong(trmtr)
             for x in range(mat_count):
-                mat_shader = "Standard"; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""
+                mat_shader = ""; mat_col0 = ""; mat_lym0 = ""; mat_nrm0 = ""; mat_ao0 = ""; mat_emi0 = ""; mat_rgh0 = ""; mat_mtl0 = ""; mat_msk0 = ""; mat_highmsk0 = ""; mat_sssmask0 = ""
                 mat_uv_scale_u = 1.0; mat_uv_scale_v = 1.0; mat_uv_trs_u = 0; mat_uv_trs_v = 0
                 mat_uv_scale2_u = 1.0; mat_uv_scale2_v = 1.0; mat_uv_trs2_u = 0; mat_uv_trs2_v = 0
+                mat_color_r = 1.0; mat_color_g = 1.0; mat_color_b = 1.0
                 mat_color1_r = 1.0; mat_color1_g = 1.0; mat_color1_b = 1.0
                 mat_color2_r = 1.0; mat_color2_g = 1.0; mat_color2_b = 1.0
                 mat_color3_r = 1.0; mat_color3_g = 1.0; mat_color3_b = 1.0
-                mat_color4_r = 1.0; mat_color4_g = 1.0; mat_color4_b = 1.0
+                mat_color4_r = 12312312.0; mat_color4_g = 12312312.0; mat_color4_b = 12312312.0
+
+                mat_emcolor1_r = 0.0; mat_emcolor1_g = 0.0; mat_emcolor1_b = 0.0
+                mat_emcolor2_r = 0.0; mat_emcolor2_g = 0.0; mat_emcolor2_b = 0.0
+                mat_emcolor3_r = 0.0; mat_emcolor3_g = 0.0; mat_emcolor3_b = 0.0
+                mat_emcolor4_r = 0.0; mat_emcolor4_g = 0.0; mat_emcolor4_b = 0.0
+                mat_emcolor5_r = 0.0; mat_emcolor5_g = 0.0; mat_emcolor5_b = 0.0
+                mat_ssscolor_r = 0.0; mat_ssscolor_g = 0.0; mat_ssscolor_b = 0.0
                 mat_rgh_layer0 = 1.0; mat_rgh_layer1 = 1.0; mat_rgh_layer2 = 1.0; mat_rgh_layer3 = 1.0; mat_rgh_layer4 = 1.0
                 mat_mtl_layer0 = 0.0; mat_mtl_layer1 = 0.0; mat_mtl_layer2 = 0.0; mat_mtl_layer3 = 0.0; mat_mtl_layer4 = 0.0
+                mat_reflectance = 0.0
+                mat_emm_intensity = 1.0
+                mat_sss_offset = 0.0
                 mat_offset = ftell(trmtr) + readlong(trmtr)
                 mat_ret = ftell(trmtr)
 
@@ -374,7 +212,7 @@ def from_trmdl(filep, trmdl):
                 mat_enable_metallic_map = False
                 mat_enable_displacement_map = False
                 mat_enable_highlight_map = False
-
+                mat_num_material_layer = 0
                 fseek(trmtr, mat_offset)
                 print("--------------------")
                 mat_struct = ftell(trmtr) - readlong(trmtr); fseek(trmtr, mat_struct)
@@ -468,6 +306,7 @@ def from_trmdl(filep, trmdl):
                                 if mat_param_b_sub_string == "EnableDisplacementMap": mat_enable_displacement_map = mat_param_b_sub_value == "True"
                                 if mat_param_b_sub_string == "EnableHighlight": mat_enable_highlight_map = mat_param_b_sub_value == "True"
                                 if mat_param_b_sub_string == "EnableOverrideColor": mat_enable_override_color = mat_param_b_sub_value == "True"
+                                if mat_param_b_sub_string == "NumMaterialLayer": mat_num_material_layer = int(mat_param_b_sub_value)
                                 fseek(trmtr, mat_param_b_sub_ret)
                         fseek(trmtr, mat_param_b_ret)
 
@@ -513,15 +352,15 @@ def from_trmdl(filep, trmdl):
                             mat_param_c_id = 0
 
                         if mat_param_c_string == "BaseColorMap": mat_col0 = mat_param_c_value
-                        elif mat_param_c_string == "LayerMaskMap": mat_lym0 = mat_param_c_value
-                        elif mat_param_c_string == "NormalMap": mat_nrm0 = mat_param_c_value
-                        elif mat_param_c_string == "AOMap": mat_ao0 = mat_param_c_value
-                        elif mat_param_c_string == "EmissionColorMap": mat_emi0 = mat_param_c_value
-                        elif mat_param_c_string == "RoughnessMap": mat_rgh0 = mat_param_c_value
-                        elif mat_param_c_string == "MetallicMap": mat_mtl0 = mat_param_c_value
-                        elif mat_param_c_string == "DisplacementMap": mat_msk0 = mat_param_c_value
-                        elif mat_param_c_string == "HighlightMaskMap": mat_highmsk0 = mat_param_c_value
-
+                        if mat_param_c_string == "LayerMaskMap": mat_lym0 = mat_param_c_value
+                        if mat_param_c_string == "NormalMap": mat_nrm0 = mat_param_c_value
+                        if mat_param_c_string == "AOMap": mat_ao0 = mat_param_c_value
+                        if mat_param_c_string == "EmissionColorMap": mat_emi0 = mat_param_c_value
+                        if mat_param_c_string == "RoughnessMap": mat_rgh0 = mat_param_c_value
+                        if mat_param_c_string == "MetallicMap": mat_mtl0 = mat_param_c_value
+                        if mat_param_c_string == "DisplacementMap": mat_msk0 = mat_param_c_value
+                        if mat_param_c_string == "HighlightMaskMap": mat_highmsk0 = mat_param_c_value
+                        if mat_param_c_string == "SSSMaskMap": mat_sssmask0 = mat_param_c_value
                         # -- There's also all of the following, which aren't automatically assigned to keep things simple.
                         # -- "AOMap"
                         # -- "AOMap1"
@@ -673,7 +512,9 @@ def from_trmdl(filep, trmdl):
                         elif mat_param_e_string == "MetallicLayer2": mat_mtl_layer2 = mat_param_e_value
                         elif mat_param_e_string == "MetallicLayer3": mat_mtl_layer3 = mat_param_e_value
                         elif mat_param_e_string == "MetallicLayer4": mat_mtl_layer4 = mat_param_e_value
-
+                        elif mat_param_e_string == "Reflectance": mat_reflectance = mat_param_e_value
+                        elif mat_param_e_string == "EmissionIntensity": mat_emm_intensity = mat_param_e_value
+                        elif mat_param_e_string == "SSSMaskOffset": mat_sss_offset = mat_param_e_value
                         print(f"(param_e) {mat_param_e_string}: {mat_param_e_value}")
                         fseek(trmtr, mat_param_e_ret)
 
@@ -778,10 +619,17 @@ def from_trmdl(filep, trmdl):
 
                         if mat_param_h_string == "UVScaleOffset": mat_uv_scale_u = mat_param_h_value1; mat_uv_scale_v = mat_param_h_value2; mat_uv_trs_u = mat_param_h_value3; mat_uv_trs_v = mat_param_h_value4
                         elif mat_param_h_string == "UVScaleOffset1": mat_uv_scale2_u = mat_param_h_value1; mat_uv_scale2_v = mat_param_h_value2; mat_uv_trs2_u = mat_param_h_value3; mat_uv_trs2_v = mat_param_h_value4
+                        elif mat_param_h_string == "BaseColor": mat_color_r = mat_param_h_value1; mat_color_g = mat_param_h_value2; mat_color_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer1": mat_color1_r = mat_param_h_value1; mat_color1_g = mat_param_h_value2; mat_color1_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer2": mat_color2_r = mat_param_h_value1; mat_color2_g = mat_param_h_value2; mat_color2_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer3": mat_color3_r = mat_param_h_value1; mat_color3_g = mat_param_h_value2; mat_color3_b = mat_param_h_value3
                         elif mat_param_h_string == "BaseColorLayer4": mat_color4_r = mat_param_h_value1; mat_color4_g = mat_param_h_value2; mat_color4_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer1": mat_emcolor1_r = mat_param_h_value1; mat_emcolor1_g = mat_param_h_value2; mat_emcolor1_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer2": mat_emcolor2_r = mat_param_h_value1; mat_emcolor2_g = mat_param_h_value2; mat_emcolor2_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer3": mat_emcolor3_r = mat_param_h_value1; mat_emcolor3_g = mat_param_h_value2; mat_emcolor3_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer4": mat_emcolor4_r = mat_param_h_value1; mat_emcolor4_g = mat_param_h_value2; mat_emcolor4_b = mat_param_h_value3
+                        elif mat_param_h_string == "EmissionColorLayer5": mat_emcolor5_r = mat_param_h_value1; mat_emcolor5_g = mat_param_h_value2; mat_emcolor5_b = mat_param_h_value3
+                        elif mat_param_h_string == "SubsurfaceColor":  mat_ssscolor_r = mat_param_h_value1; mat_ssscolor_g = mat_param_h_value2; mat_ssscolor_b = mat_param_h_value3
                         else: print(f"Unknown mat_param_h: {mat_param_h_string}")
 
                         print(f"(param_h) {mat_param_h_string}: {mat_param_h_value1}, {mat_param_h_value2}, {mat_param_h_value3}, {mat_param_h_value4}")
@@ -921,12 +769,23 @@ def from_trmdl(filep, trmdl):
                     "mat_mtl0": mat_mtl0,
                     "mat_msk0": mat_msk0,
                     "mat_highmsk0": mat_highmsk0,
+                    "mat_sssmask0": mat_sssmask0,
+                    "mat_color_r": mat_color_r, "mat_color_g": mat_color_g, "mat_color_b": mat_color_b,
                     "mat_color1_r": mat_color1_r, "mat_color1_g": mat_color1_g, "mat_color1_b": mat_color1_b,
                     "mat_color2_r": mat_color2_r, "mat_color2_g": mat_color2_g, "mat_color2_b": mat_color2_b,
                     "mat_color3_r": mat_color3_r, "mat_color3_g": mat_color3_g, "mat_color3_b": mat_color3_b,
                     "mat_color4_r": mat_color4_r, "mat_color4_g": mat_color4_g, "mat_color4_b": mat_color4_b,
+                    "mat_emcolor1_r": mat_emcolor1_r, "mat_emcolor1_g": mat_emcolor1_g, "mat_emcolor1_b": mat_emcolor1_b,
+                    "mat_emcolor2_r": mat_emcolor2_r, "mat_emcolor2_g": mat_emcolor2_g, "mat_emcolor2_b": mat_emcolor2_b,
+                    "mat_emcolor3_r": mat_emcolor3_r, "mat_emcolor3_g": mat_emcolor3_g, "mat_emcolor3_b": mat_emcolor3_b,
+                    "mat_emcolor4_r": mat_emcolor4_r, "mat_emcolor4_g": mat_emcolor4_g, "mat_emcolor4_b": mat_emcolor4_b,
+                    "mat_emcolor5_r": mat_emcolor5_r, "mat_emcolor5_g": mat_emcolor5_g, "mat_emcolor5_b": mat_emcolor5_b,
+                    "mat_ssscolor_r": mat_ssscolor_r, "mat_ssscolor_g": mat_ssscolor_g, "mat_ssscolor_b": mat_ssscolor_b,
                     "mat_rgh_layer0": mat_rgh_layer0, "mat_rgh_layer1": mat_rgh_layer1, "mat_rgh_layer2": mat_rgh_layer2, "mat_rgh_layer3": mat_rgh_layer3, "mat_rgh_layer4": mat_rgh_layer4,
                     "mat_mtl_layer0": mat_mtl_layer0, "mat_mtl_layer1": mat_mtl_layer1, "mat_mtl_layer2": mat_mtl_layer2, "mat_mtl_layer3": mat_mtl_layer3, "mat_mtl_layer4": mat_mtl_layer4,
+                    "mat_reflectance": mat_reflectance,
+                    "mat_emm_intensity": mat_emm_intensity,
+                    "mat_sss_offset": mat_sss_offset,
                     "mat_uv_scale_u": mat_uv_scale_u, "mat_uv_scale_v": mat_uv_scale_v,
                     "mat_uv_scale2_u": mat_uv_scale2_u, "mat_uv_scale2_v": mat_uv_scale2_v,
                     "mat_enable_base_color_map": mat_enable_base_color_map,
@@ -936,215 +795,140 @@ def from_trmdl(filep, trmdl):
                     "mat_enable_roughness_map": mat_enable_roughness_map,
                     "mat_enable_metallic_map": mat_enable_metallic_map,
                     "mat_enable_displacement_map": mat_enable_displacement_map,
-                    "mat_enable_highlight_map": mat_enable_highlight_map
+                    "mat_enable_highlight_map": mat_enable_highlight_map,
+                    "mat_num_material_layer": mat_num_material_layer
                 })
                 fseek(trmtr, mat_ret)
             print("--------------------")
+        mat_data_array = sorted(mat_data_array, key=lambda x: x['mat_name'])
 
         fclose(trmtr)
-
+        
         if IN_BLENDER_ENV:
-            # process materials
+            addons_path = bpy.utils.user_resource('SCRIPTS')
+
+            if not 'ScViShader' in bpy.data.materials or not 'ScViShader' in bpy.data.materials:
+                try:
+                    response = requests.get("https://raw.githubusercontent.com/ChicoEevee/Pokemon-Switch-V2-Model-Importer-Blender/master/SCVIShader.blend", stream=True)
+                    with open(os.path.join(addons_path,"addons/SCVIShader.blend"), 'wb') as file:
+                        file.write(response.content)
+                except:
+                    print("Offline Mode")
+                with bpy.data.libraries.load(os.path.join(addons_path,"addons/SCVIShader.blend"), link=False) as (data_from, data_to):
+                    data_to.materials = data_from.materials
+                    print('! Loaded shader blend file.')
             for m, mat in enumerate(mat_data_array):
-                material = bpy.data.materials.new(name=mat["mat_name"])
-                material.use_nodes = True
+                if "eye" in mat["mat_name"] and "pm" in trmtr.name:
+                    material = bpy.data.materials["ScViMonEyeShader"].copy()
+                else:
+                    material = bpy.data.materials["ScViShader"].copy()
+                    
+                material.name = mat["mat_name"]
                 materials.append(material)
-
-                blend_type = "MIX"
-
-                material_output = material.node_tree.nodes.get("Material Output")
-                principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
-                material.node_tree.links.new(principled_bsdf.outputs[0], material_output.inputs[0])
-
-                print(f"mat_shader = {mat['mat_shader']}")
-
-                color_output = principled_bsdf.inputs[0]
-                if mat["mat_shader"] == "Unlit":
-                    color_output = material_output.inputs[0]
-                
-                uv_map = material.node_tree.nodes.new("ShaderNodeUVMap")
-                separate_xyz = material.node_tree.nodes.new("ShaderNodeSeparateXYZ")
-    
-                math_multiply1 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply1.operation = "MULTIPLY"
-                math_multiply1.inputs[1].default_value = mat["mat_uv_scale_u"]
-    
-                math_multiply2 = material.node_tree.nodes.new("ShaderNodeMath")
-                math_multiply2.operation = "MULTIPLY"
-                math_multiply2.inputs[1].default_value = mat["mat_uv_scale_v"]
-    
-                math_ping_pong = material.node_tree.nodes.new("ShaderNodeMath")
-                math_ping_pong.operation = "PINGPONG"
-                math_ping_pong.inputs[1].default_value = 1.0
-    
-                combine_xyz = material.node_tree.nodes.new("ShaderNodeCombineXYZ")
-                
-                material.node_tree.links.new(uv_map.outputs[0], separate_xyz.inputs[0])
-                material.node_tree.links.new(separate_xyz.outputs[0], math_multiply1.inputs[0])
-                material.node_tree.links.new(math_multiply1.outputs[0], math_ping_pong.inputs[0])
-                material.node_tree.links.new(math_ping_pong.outputs[0], combine_xyz.inputs[0])
-                    
-                if chara_check == "Pokemon":
-                    # LAYER MASK MAP
+                shadegroupnodes = material.node_tree.nodes['Group']
+                try:
+                    shadegroupnodes.inputs['BaseColor'].default_value = (mat["mat_color_r"], mat["mat_color_g"], mat["mat_color_b"], 1.0)
+                except:
+                    print("")
+                if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
                     lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + ".png"))
+                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
                     lym_image_texture.image.colorspace_settings.name = "Non-Color"
-                    huesaturationvalue = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                    huesaturationvalue.inputs[2].default_value = 2.0
-                    huesaturationvalue2 = material.node_tree.nodes.new("ShaderNodeHueSaturation")
-                    huesaturationvalue2.inputs[2].default_value = 2.0
-    
-                    color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
-                    color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
-                    color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
-                    color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
-    
-                    print(f'Material {mat["mat_name"]}:')
-                    print(f"Color 1: {color1}")
-                    print(f"Color 2: {color2}")
-                    print(f"Color 3: {color3}")
-                    print(f"Color 4: {color4}")
-                    print("---")
-     
-                    mix_color1 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color1.blend_type = blend_type
-                    mix_color1.inputs[1].default_value = (1, 1, 1, 1)
-                    mix_color1.inputs[2].default_value = color1
-                    mix_color2 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color2.blend_type = blend_type
-                    mix_color2.inputs[1].default_value = (0, 0, 0, 0)
-                    mix_color2.inputs[2].default_value = color2
-                    mix_color3 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color3.blend_type = blend_type
-                    mix_color3.inputs[1].default_value = (0, 0, 0, 0)
-                    mix_color3.inputs[2].default_value = color3
-                    mix_color4 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color4.blend_type = blend_type
-                    mix_color4.inputs[1].default_value = (0, 0, 0, 0)
-                    mix_color4.inputs[2].default_value = color4
-                    mix_color5 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                    mix_color5.blend_type = blend_type
-                    mix_color5.inputs[0].default_value = 0.0
-                    mix_color5.inputs[1].default_value = (0, 0, 0, 0)
-                    mix_color5.inputs[2].default_value = (1, 1, 1, 1)
-                    
-                    material.node_tree.links.new(mix_color1.outputs[0], mix_color2.inputs[1])
-                    material.node_tree.links.new(mix_color2.outputs[0], mix_color3.inputs[1])
-                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                    material.node_tree.links.new(mix_color3.outputs[0], mix_color4.inputs[1])
-                    material.node_tree.links.new(mix_color4.outputs[0], color_output)
-                    
-                    separate_color = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                    material.node_tree.links.new(lym_image_texture.outputs[0], huesaturationvalue.inputs[4])
-                    material.node_tree.links.new(huesaturationvalue.outputs[0], separate_color.inputs[0])
-                    material.node_tree.links.new(separate_color.outputs[0], mix_color1.inputs[0])
-                    material.node_tree.links.new(separate_color.outputs[1], mix_color2.inputs[0])
-                    material.node_tree.links.new(separate_color.outputs[2], mix_color3.inputs[0])
-                    material.node_tree.links.new(lym_image_texture.outputs[1],  huesaturationvalue2.inputs[4])
-                    material.node_tree.links.new(huesaturationvalue2.outputs[0],  mix_color4.inputs[0])
-    
-                    material.node_tree.links.new(separate_xyz.outputs[1], math_multiply2.inputs[0])
-                    material.node_tree.links.new(math_multiply2.outputs[0], combine_xyz.inputs[1])
-                    material.node_tree.links.new(combine_xyz.outputs[0], lym_image_texture.inputs[0])
-                    
-                    if mat["mat_enable_base_color_map"]:
-                        alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
-                        material.node_tree.links.new(alb_image_texture.outputs[0],  mix_color1.inputs[1])
-                        material.node_tree.links.new(combine_xyz.outputs[0], alb_image_texture.inputs[0]) 
-                        
-                    if mat["mat_enable_highlight_map"]:
-                        highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                
+                color1 = (mat["mat_color1_r"], mat["mat_color1_g"], mat["mat_color1_b"], 1.0)
+                color2 = (mat["mat_color2_r"], mat["mat_color2_g"], mat["mat_color2_b"], 1.0)
+                color3 = (mat["mat_color3_r"], mat["mat_color3_g"], mat["mat_color3_b"], 1.0)
+                color4 = (mat["mat_color4_r"], mat["mat_color4_g"], mat["mat_color4_b"], 1.0)
+                emcolor1 = (mat["mat_emcolor1_r"], mat["mat_emcolor1_g"], mat["mat_emcolor1_b"], 1.0)
+                emcolor2 = (mat["mat_emcolor2_r"], mat["mat_emcolor2_g"], mat["mat_emcolor2_b"], 1.0)
+                emcolor3 = (mat["mat_emcolor3_r"], mat["mat_emcolor3_g"], mat["mat_emcolor3_b"], 1.0)                   
+                emcolor4 = (mat["mat_emcolor4_r"], mat["mat_emcolor4_g"], mat["mat_emcolor4_b"], 1.0)
+                shadegroupnodes.inputs['BaseColorLayer1'].default_value = color1
+                shadegroupnodes.inputs['BaseColorLayer2'].default_value = color2
+                shadegroupnodes.inputs['BaseColorLayer3'].default_value = color3
+                shadegroupnodes.inputs['BaseColorLayer4'].default_value = color4
+                shadegroupnodes.inputs['EmissionColorLayer1'].default_value = emcolor1
+                shadegroupnodes.inputs['EmissionColorLayer2'].default_value = emcolor2
+                shadegroupnodes.inputs['EmissionColorLayer3'].default_value = emcolor3
+                shadegroupnodes.inputs['EmissionColorLayer4'].default_value = emcolor4
+                if os.path.exists(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension)) == True:
+                    lym_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    lym_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_lym0"][:-5] + textureextension))
+                    lym_image_texture.image.colorspace_settings.name = "Non-Color"
+                    material.node_tree.links.new(lym_image_texture.outputs[0], shadegroupnodes.inputs['Lym_color'])
+                    if color4 != (12312312.0,12312312.0,12312312.0,1.0):
+                        material.node_tree.links.new(lym_image_texture.outputs[1], shadegroupnodes.inputs['Lym_alpha'])
+                if os.path.exists(os.path.join(filep, mat["mat_col0"][:-5] + textureextension)) == True:
+                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + textureextension))
+                    material.node_tree.links.new(alb_image_texture.outputs[0], shadegroupnodes.inputs['Albedo'])
+                    material.node_tree.links.new(alb_image_texture.outputs[1], shadegroupnodes.inputs['AlbedoAlpha'])
+
+
+                if mat["mat_enable_highlight_map"]:
+                    highlight_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")                        
+                    if os.path.exists(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png")) == True:
                         highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_highmsk0"][:-5] + ".png"))
                         highlight_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(highlight_image_texture.outputs[0],  mix_color5.inputs[0])
-                        material.node_tree.links.new(mix_color4.outputs[0], mix_color5.inputs[1])
-                        material.node_tree.links.new(mix_color5.outputs[0], color_output)
-                        material.node_tree.links.new(highlight_image_texture.outputs[0], principled_bsdf.inputs[19])
-                        
-                    if mat["mat_enable_normal_map"]:
-                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
+                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
+                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png")) == True:
+                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-8] + "msk.png"))
+                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png")) == True and mat["mat_name"] == "eye_r":
+                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "r_eye_msk.png"))
+                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    elif os.path.exists(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png")) == True and mat["mat_name"] == "eye_l":
+                        highlight_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-12] + "l_eye_msk.png"))
+                        highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                    else:
+                        try:
+                            for x in range(10,30):
+                                if os.path.exists(os.path.join(filep.replace(f"pm0025_{x}_00", "pm0025_00_00"), "pm0025_00_00_eye_msk.png")) == True and "pm0025" in trmtr.name:
+                                    highlight_image_texture.image = bpy.data.images.load(os.path.join(filep.replace(f"pm0025_{x}_00", "pm0025_00_00"), "pm0025_00_00_eye_msk.png"))
+                                    highlight_image_texture.image.colorspace_settings.name = "Non-Color"
+                        except:
+                            print("No Highlight")
+                    material.node_tree.links.new(highlight_image_texture.outputs[0], shadegroupnodes.inputs['Mask'])
+                if mat["mat_enable_normal_map"]:
+                    normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if os.path.exists(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension)) == True:
+                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + textureextension))
                         normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
-                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
-                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
-                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
-                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
-                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
-                        
-                    if mat["mat_enable_metallic_map"]:
-                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
-                        metalness_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
-                        
-                    if mat["mat_enable_roughness_map"]:
-                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
-                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])
-                        material.node_tree.links.new(combine_xyz.outputs[0], roughness_image_texture.inputs[0])    
-                        
-                    if mat["mat_enable_ao_map"]:
-                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
-                        ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
-                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                        mix_color6.blend_type = "MULTIPLY"
-                        mix_color6.inputs[0].default_value = 1.0
-                        if mix_color5 == True:
-                            material.node_tree.links.new(mix_color5.outputs[0], mix_color6.inputs[0])
-                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[1])
-                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                        else:
-                            material.node_tree.links.new(mix_color4.outputs[0], mix_color6.inputs[1])
-                            material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
-                            material.node_tree.links.new(mix_color6.outputs[0], color_output)
-                else:  
-                    alb_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                    alb_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_col0"][:-5] + ".png"))
-                    material.node_tree.links.new(alb_image_texture.outputs[0], color_output)
+                    separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
+                    combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
+                    normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
+                    material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
+                    material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
+                    material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
+                    material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
+                    material.node_tree.links.new(combine_color2.outputs[0], shadegroupnodes.inputs['NormalMap'])
 
-                    if mat["mat_enable_normal_map"]:
-                        normal_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        normal_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_nrm0"][:-5] + ".png"))
-                        normal_image_texture.image.colorspace_settings.name = "Non-Color"
-                        separate_color2 = material.node_tree.nodes.new("ShaderNodeSeparateRGB")
-                        combine_color2 = material.node_tree.nodes.new("ShaderNodeCombineColor")
-                        normal_map2 = material.node_tree.nodes.new("ShaderNodeNormalMap")
-                        material.node_tree.links.new(normal_image_texture.outputs[0], separate_color2.inputs[0])
-                        material.node_tree.links.new(separate_color2.outputs[0], combine_color2.inputs[0])
-                        material.node_tree.links.new(separate_color2.outputs[1], combine_color2.inputs[1])
-                        material.node_tree.links.new(normal_image_texture.outputs[1], combine_color2.inputs[2])
-                        material.node_tree.links.new(combine_color2.outputs[0], normal_map2.inputs[1])
-                        material.node_tree.links.new(normal_map2.outputs[0], principled_bsdf.inputs[22])
-                        
-                    if mat["mat_enable_metallic_map"]:
-                        metalness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        metalness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + ".png"))
-                        metalness_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(metalness_image_texture.outputs[0], principled_bsdf.inputs[6])
-                        
-                    if mat["mat_enable_roughness_map"]:
-                        roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + ".png"))
+                if mat["mat_enable_emission_color_map"]:
+                    emission_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if os.path.exists(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension)) == True:
+                        emission_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_emi0"][:-5] + textureextension))
+                    material.node_tree.links.new(emission_image_texture.outputs[0], shadegroupnodes.inputs['Emission'])
+                
+                if mat["mat_enable_roughness_map"]:
+                    roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if os.path.exists(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension)) == True:
+                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_rgh0"][:-5] + textureextension))
                         roughness_image_texture.image.colorspace_settings.name = "Non-Color"
-                        material.node_tree.links.new(roughness_image_texture.outputs[0], principled_bsdf.inputs[9])  
-                        
-                    if mat["mat_enable_ao_map"]:
-                        ambientocclusion_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
-                        ambientocclusion_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_ao0"][:-5] + ".png"))
-                        ambientocclusion_image_texture.image.colorspace_settings.name = "Non-Color"
-                        mix_color6 = material.node_tree.nodes.new("ShaderNodeMixRGB")
-                        mix_color6.blend_type = "MULTIPLY"
-                        mix_color6.inputs[0].default_value = 1.0
-                        material.node_tree.links.new(alb_image_texture.outputs[0], mix_color6.inputs[1])
-                        material.node_tree.links.new(ambientocclusion_image_texture.outputs[0], mix_color6.inputs[2])
-                        material.node_tree.links.new(mix_color6.outputs[0], color_output)
+                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Roughness'])
+
+                if mat["mat_enable_metallic_map"]:
+                    roughness_image_texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+                    if os.path.exists(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension)) == True:
+                        roughness_image_texture.image = bpy.data.images.load(os.path.join(filep, mat["mat_mtl0"][:-5] + textureextension))
+                        roughness_image_texture.image.colorspace_settings.name = "Non-Color"
+                    material.node_tree.links.new(roughness_image_texture.outputs[0], shadegroupnodes.inputs['Metallic'])
+
+ 
+
+    if loadlods == False:
+        trmsh_count = 1
                         
     for w in range(trmsh_count):
         if os.path.exists(os.path.join(filep, trmsh_lods_array[w])):
@@ -1213,35 +997,57 @@ def from_trmdl(filep, trmdl):
                             b1_array = []
                             w1_array = []
                             weight_array = []
+                            Morphs_array = []
+                            MorphName_array = []
+                            groupoffset_array = []
+                            mat_array = []
                             poly_group_name = ""; vis_group_name = ""; vert_buffer_stride = 0; mat_id = 0
-                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"
+                            positions_fmt = "None"; normals_fmt = "None"; tangents_fmt = "None"; bitangents_fmt = "None"; tritangents_fmt = "None"
                             uvs_fmt = "None"; uvs2_fmt = "None"; uvs3_fmt = "None"; uvs4_fmt = "None"
-                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"
+                            colors_fmt = "None"; colors2_fmt = "None"; bones_fmt = "None"; weights_fmt = "None"; svunk_fmt = "None"
 
                             poly_group_offset = ftell(trmsh) + readlong(trmsh)
                             poly_group_ret = ftell(trmsh)
                             fseek(trmsh, poly_group_offset)
-                            print(f"PolyGroup offset #{x}: {hex(poly_group_offset)}")
                             poly_group_struct = ftell(trmsh) - readlong(trmsh)
                             fseek(trmsh, poly_group_struct)
                             poly_group_struct_len = readshort(trmsh)
 
-                            if poly_group_struct_len != 0x001E:
-                                raise AssertionError("Unexpected PolyGroup struct length!")
-                            poly_group_struct_section_len = readshort(trmsh)
-                            poly_group_struct_ptr_poly_group_name = readshort(trmsh)
-                            poly_group_struct_ptr_bbbox = readshort(trmsh)
-                            poly_group_struct_ptp_unc_a = readshort(trmsh)
-                            poly_group_struct_ptr_vert_buff = readshort(trmsh)
-                            poly_group_struct_ptr_mat_list = readshort(trmsh)
-                            poly_group_struct_ptr_unk_b = readshort(trmsh)
-                            poly_group_struct_ptr_unk_c = readshort(trmsh)
-                            poly_group_struct_ptr_unk_d = readshort(trmsh)
-                            poly_group_struct_ptr_unk_e = readshort(trmsh)
-                            poly_group_struct_ptr_unk_float = readshort(trmsh)
-                            poly_group_struct_ptr_unk_g = readshort(trmsh)
-                            poly_group_struct_ptr_unk_h = readshort(trmsh)
-                            poly_group_struct_ptr_vis_group_name = readshort(trmsh)
+
+                            if poly_group_struct_len == 0x001E:
+                                poly_group_struct_section_len = readshort(trmsh)
+                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
+                                poly_group_struct_ptr_bbbox = readshort(trmsh)
+                                poly_group_struct_ptp_unc_a = readshort(trmsh)
+                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
+                                poly_group_struct_ptr_mat_list = readshort(trmsh)
+                                poly_group_struct_ptr_unk_b = readshort(trmsh)
+                                poly_group_struct_ptr_unk_c = readshort(trmsh)
+                                poly_group_struct_ptr_unk_d = readshort(trmsh)
+                                poly_group_struct_ptr_unk_e = readshort(trmsh)
+                                poly_group_struct_ptr_unk_float = readshort(trmsh)
+                                poly_group_struct_ptr_unk_g = readshort(trmsh)
+                                poly_group_struct_ptr_morphname = readshort(trmsh)
+                                poly_group_struct_ptr_vis_group_name = readshort(trmsh)
+                                poly_group_struct_ptr_unk_i = 0
+                                poly_group_struct_ptr_group_name = 0
+                            elif poly_group_struct_len == 0x0022:
+                                poly_group_struct_section_len = readshort(trmsh)
+                                poly_group_struct_ptr_poly_group_name = readshort(trmsh)
+                                poly_group_struct_ptr_bbbox = readshort(trmsh)
+                                poly_group_struct_ptp_unc_a = readshort(trmsh)
+                                poly_group_struct_ptr_vert_buff = readshort(trmsh)
+                                poly_group_struct_ptr_mat_list = readshort(trmsh)
+                                poly_group_struct_ptr_unk_b = readshort(trmsh)
+                                poly_group_struct_ptr_unk_c = readshort(trmsh)
+                                poly_group_struct_ptr_unk_d = readshort(trmsh)
+                                poly_group_struct_ptr_unk_e = readshort(trmsh)
+                                poly_group_struct_ptr_unk_float = readshort(trmsh)
+                                poly_group_struct_ptr_unk_g = readshort(trmsh)
+                                poly_group_struct_ptr_morphname = readshort (trmsh)
+                                poly_group_struct_ptr_vis_group_name = readshort (trmsh)
+                                poly_group_struct_ptr_unk_i = readshort(trmsh)
+                                poly_group_struct_ptr_group_name = readshort(trmsh)
 
                             if poly_group_struct_ptr_mat_list != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_mat_list)
@@ -1284,7 +1090,7 @@ def from_trmdl(filep, trmdl):
                                         fseek(trmsh, mat_name_offset)
                                         mat_name_len = readlong(trmsh)
                                         mat_name = readfixedstring(trmsh, mat_name_len)
-
+                                        mat_array.append(mat_name)
                                     if mat_struct_ptr_unk_d != 0:
                                         fseek(trmsh, mat_entry_offset + mat_struct_ptr_unk_d)
                                         mat_unk_d = readlong(trmsh)
@@ -1298,7 +1104,7 @@ def from_trmdl(filep, trmdl):
                                     for z in range(mat_facepoint_count):
                                         face_mat_id_array.append(mat_id)
 
-                                    print(f"Material {mat_name}: FaceCount = {mat_facepoint_count}, FaceStart = {mat_facepoint_start}")
+                                    #print(f"Material {mat_name}: FaceCount = {mat_facepoint_count}, FaceStart = {mat_facepoint_start}")
                                     fseek(trmsh, mat_ret)
 
                             if poly_group_struct_ptr_poly_group_name != 0:
@@ -1306,14 +1112,47 @@ def from_trmdl(filep, trmdl):
                                 poly_group_name_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, poly_group_name_offset)
                                 poly_group_name_len = readlong(trmsh)
                                 poly_group_name = readfixedstring(trmsh, poly_group_name_len)
-                                print(f"Building {poly_group_name}...")
+                                
+                            if poly_group_struct_ptr_group_name != 0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_group_name)
+                                group_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, group_name_header_offset)
+                                group_name_count = readlong(trmsh)
+                                for g in range(group_name_count):
+                                    group_name_offset = ftell(trmsh) + readlong(trmsh)
+                                    groupoffset_array.append(group_name_offset)
+                                    
                             if poly_group_struct_ptr_vis_group_name != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vis_group_name)
                                 vis_group_name_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, vis_group_name_offset)
                                 vis_group_name_len = readlong(trmsh)
                                 vis_group_name = readfixedstring(trmsh, vis_group_name_len)
-                                # changed the output variable because the original seems to be a typo
-                                print(f"VisGroup: {vis_group_name}")
+                                
+                            if poly_group_struct_ptr_morphname !=0:
+                                fseek(trmsh, poly_group_offset + poly_group_struct_ptr_morphname)
+                                morph_name_header_offset = ftell(trmsh) + readlong(trmsh); fseek(trmsh, morph_name_header_offset)
+                                morph_name_count = readlong(trmsh)
+                                for m in range(morph_name_count):
+                                    morph_name_header_offset = ftell (trmsh) + readlong (trmsh)
+                                    morph_ret = ftell (trmsh)
+                                    fseek (trmsh, morph_name_header_offset)
+                                    morph_name_struct = ftell (trmsh) - readlong (trmsh)
+                                    fseek (trmsh, morph_name_struct)
+                                    morph_name_struct_len = readshort (trmsh)
+                                    if morph_name_struct_len == 0x0008:
+                                        morph_name_struct_section_len = readshort (trmsh)
+                                        morph_name_struct_ptr_ID = readshort (trmsh)
+                                        morph_name_struct_ptr_name = readshort (trmsh)
+                                    else:
+                                        raise AssertionError("Unexpected morph name struct length!")
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_ID)
+                                    morph_name_ID = readlong (trmsh)
+                                    fseek (trmsh, morph_name_header_offset + morph_name_struct_ptr_name)
+                                    morph_name_start = ftell (trmsh) + readlong (trmsh)
+                                    fseek (trmsh, morph_name_start)
+                                    morph_name_len = readlong (trmsh)
+                                    morph_name = readfixedstring (trmsh, morph_name_len)
+                                    MorphName_array.append(morph_name)
+                                    fseek (trmsh, morph_ret)
                             if poly_group_struct_ptr_vert_buff != 0:
                                 fseek(trmsh, poly_group_offset + poly_group_struct_ptr_vert_buff)
                                 poly_group_vert_buff_offset = ftell(trmsh) + readlong(trmsh)
@@ -1395,7 +1234,7 @@ def from_trmdl(filep, trmdl):
                                         # -- 0x30 = 2 floats
                                         # -- 0x33 = 3 floats
                                         # -- 0x36 = 4 floats
-
+                                        #print(f'vert_buff_param_type = {vert_buff_param_type}')
                                         if vert_buff_param_type == 0x01:
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected positions layer!")
@@ -1423,23 +1262,39 @@ def from_trmdl(filep, trmdl):
                                                     raise AssertionError("Unexpected bitangents format!")
 
                                                 bitangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                            elif vert_buff_param_layer == 2:
+                                                if vert_buff_param_format != 0x2B:
+                                                    raise AssertionError("Unexpected tritangents format!")
+
+                                                tritangents_fmt = "4HalfFloats"; vert_buffer_stride = vert_buffer_stride + 0x08
                                             else:
                                                 raise AssertionError("Unexpected tangents layer!")
+                                                
+                                                
+                                                
+                                        
                                         elif vert_buff_param_type == 0x05:
                                             if vert_buff_param_layer == 0:
                                                 if vert_buff_param_format == 0x14:
                                                     colors_fmt = "4BytesAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                                elif vert_buff_param_format == 0x16:
+                                                    colors_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
                                                 elif vert_buff_param_format == 0x36:
                                                     colors_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
-                                                    raise AssertionError("Unexpected colors format!")
+                                                    raise AssertionError(hex(vert_buff_param_format))
                                             elif vert_buff_param_layer == 1:
                                                 if vert_buff_param_format == 0x14:
                                                     colors2_fmt = "4BytesAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                                elif vert_buff_param_format == 0x16:
+                                                    colors_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
                                                 elif vert_buff_param_format == 0x36:
                                                     colors2_fmt = "4Floats"; vert_buffer_stride = vert_buffer_stride + 0x10
                                                 else:
                                                     raise AssertionError("Unexpected colors2 format!")
+                                                    
+                                                    
+
                                         elif vert_buff_param_type == 0x06:
                                             if vert_buff_param_layer == 0:
                                                 if vert_buff_param_format != 0x30:
@@ -1475,12 +1330,23 @@ def from_trmdl(filep, trmdl):
                                             if vert_buff_param_layer != 0:
                                                 raise AssertionError("Unexpected weights layer!")
 
-                                            if vert_buff_param_format != 0x27:
-                                                raise AssertionError("Unexpected weights format!")
+                                            ##if vert_buff_param_format != 0x27:
+                                            ##    raise AssertionError("Unexpected weights format!")
+                                            if vert_buff_param_format == 0x16:
+                                                weights_fmt = "4Bytes"; vert_buffer_stride = vert_buffer_stride + 0x04
+                                            else:
+                                                weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                        elif vert_buff_param_type == 0x09:
+                                            if vert_buff_param_layer != 0:
+                                                raise AssertionError("Unexpected ?????? layer!")
 
-                                            weights_fmt = "4ShortsAsFloat"; vert_buffer_stride = vert_buffer_stride + 0x08
+                                            if vert_buff_param_format != 0x24:
+                                                raise AssertionError("Unexpected ?????? layer!")
+
+                                            svunk_fmt = "1Long?"; vert_buffer_stride = vert_buffer_stride + 0x04
                                         else:
                                             raise AssertionError("Unknown vertex type!")
+
 
                                         fseek(trmsh, vert_buff_param_ret)
 
@@ -1493,6 +1359,7 @@ def from_trmdl(filep, trmdl):
                                     "normals_fmt": normals_fmt,
                                     "tangents_fmt": tangents_fmt,
                                     "bitangents_fmt": bitangents_fmt,
+                                    "tritangents_fmt":tritangents_fmt,
                                     "uvs_fmt": uvs_fmt,
                                     "uvs2_fmt": uvs2_fmt,
                                     "uvs3_fmt": uvs3_fmt,
@@ -1500,7 +1367,8 @@ def from_trmdl(filep, trmdl):
                                     "colors_fmt": colors_fmt,
                                     "colors2_fmt": colors2_fmt,
                                     "bones_fmt": bones_fmt,
-                                    "weights_fmt": weights_fmt
+                                    "weights_fmt": weights_fmt,
+                                    "svunk_fmt":svunk_fmt
                                 }
                             )
                             fseek(trmsh, poly_group_ret)
@@ -1510,12 +1378,18 @@ def from_trmdl(filep, trmdl):
                             fseek(trmbf, vert_buffer_offset)
                             vert_buffer_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_struct)
                             vert_buffer_struct_len = readshort(trmbf)
-
-                            if vert_buffer_struct_len != 0x0008:
+                            if vert_buffer_struct_len == 0x0008:
+                                vert_buffer_struct_section_length = readshort(trmbf)
+                                vert_buffer_struct_ptr_faces = readshort(trmbf)
+                                vert_buffer_struct_ptr_verts = readshort(trmbf)
+                                vert_buffer_struct_ptr_groups = 0
+                            elif vert_buffer_struct_len == 0x000A:
+                                vert_buffer_struct_section_length = readshort(trmbf)
+                                vert_buffer_struct_ptr_faces = readshort(trmbf)
+                                vert_buffer_struct_ptr_verts = readshort(trmbf)
+                                vert_buffer_struct_ptr_groups = readshort(trmbf)
+                            else:
                                 raise AssertionError("Unexpected vertex buffer struct length!")
-                            vert_buffer_struct_section_length = readshort(trmbf)
-                            vert_buffer_struct_ptr_faces = readshort(trmbf)
-                            vert_buffer_struct_ptr_verts = readshort(trmbf)
 
                             if vert_buffer_struct_ptr_verts != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_verts)
@@ -1526,7 +1400,10 @@ def from_trmdl(filep, trmdl):
                                     vert_buffer_sub_offset = ftell(trmbf) + readlong(trmbf)
                                     vert_buffer_sub_ret = ftell(trmbf)
                                     fseek(trmbf, vert_buffer_sub_offset)
-                                    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    ##if y == 0:
+                                    ##    print(f"Vertex buffer {x} header: {hex(ftell(trmbf))}")
+                                    ##else:
+                                    ##    print(f"Vertex buffer {x} morph {y} header: {hex(ftell(trmbf))}")
                                     vert_buffer_sub_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, vert_buffer_sub_struct)
                                     vert_buffer_sub_struct_len = readshort(trmbf)
 
@@ -1539,156 +1416,213 @@ def from_trmdl(filep, trmdl):
                                         fseek(trmbf, vert_buffer_sub_offset + vert_buffer_sub_struct_ptr)
                                         vert_buffer_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, vert_buffer_start)
                                         vert_buffer_byte_count = readlong(trmbf)
-                                        print(f"Vertex buffer {x} start: {hex(ftell(trmbf))}")
+                                        if y == 0:
 
-                                        for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
-                                            if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
-                                                vx = readhalffloat(trmbf)
-                                                vy = readhalffloat(trmbf)
-                                                vz = readhalffloat(trmbf)
-                                                vq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["positions_fmt"] == "3Floats":
+                                            for v in range(vert_buffer_byte_count // poly_group_array[x]["vert_buffer_stride"]):
+                                                if poly_group_array[x]["positions_fmt"] == "4HalfFloats":
+                                                    vx = readhalffloat(trmbf)
+                                                    vy = readhalffloat(trmbf)
+                                                    vz = readhalffloat(trmbf)
+                                                    vq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["positions_fmt"] == "3Floats":
+                                                    vx = readfloat(trmbf)
+                                                    vy = readfloat(trmbf)
+                                                    vz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown positions type!")
+
+                                                if poly_group_array[x]["normals_fmt"] == "4HalfFloats":
+                                                    nx = readhalffloat(trmbf)
+                                                    ny = readhalffloat(trmbf)
+                                                    nz = readhalffloat(trmbf)
+                                                    nq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["normals_fmt"] == "3Floats":
+                                                    nx = readfloat(trmbf)
+                                                    ny = readfloat(trmbf)
+                                                    nz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown normals type!")
+
+                                                if poly_group_array[x]["tangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["tangents_fmt"] == "4HalfFloats":
+                                                    tanx = readhalffloat(trmbf)
+                                                    tany = readhalffloat(trmbf)
+                                                    tanz = readhalffloat(trmbf)
+                                                    tanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["tangents_fmt"] == "3Floats":
+                                                    tanx = readfloat(trmbf)
+                                                    tany = readfloat(trmbf)
+                                                    tanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown tangents type!")
+
+                                                if poly_group_array[x]["bitangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["bitangents_fmt"] == "4HalfFloats":
+                                                    bitanx = readhalffloat(trmbf)
+                                                    bitany = readhalffloat(trmbf)
+                                                    bitanz = readhalffloat(trmbf)
+                                                    bitanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["bitangents_fmt"] == "3Floats":
+                                                    bitanx = readfloat(trmbf)
+                                                    bitany = readfloat(trmbf)
+                                                    bitanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bitangents type!")
+
+                                                if poly_group_array[x]["tritangents_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["tritangents_fmt"] == "4HalfFloats":
+                                                    tritanx = readhalffloat(trmbf)
+                                                    tritany = readhalffloat(trmbf)
+                                                    tritanz = readhalffloat(trmbf)
+                                                    tritanq = readhalffloat(trmbf)
+                                                elif poly_group_array[x]["tritangents_fmt"] == "3Floats":
+                                                    tritanx = readfloat(trmbf)
+                                                    tritany = readfloat(trmbf)
+                                                    tritanz = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bitangents type!")
+
+                                                if poly_group_array[x]["uvs_fmt"] == "None":
+                                                    tu = 0
+                                                    tv = 0
+                                                elif poly_group_array[x]["uvs_fmt"] == "2Floats":
+                                                    tu = readfloat(trmbf)
+                                                    tv = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown uvs type!")
+
+                                                if poly_group_array[x]["uvs2_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs2_fmt"] == "2Floats":
+                                                    tu2 = readfloat(trmbf)
+                                                    tv2 = readfloat(trmbf)
+                                                    uv2_array.append((tu2, tv2))
+                                                else:
+                                                    raise AssertionError("Unknown uvs2 type!")
+
+                                                if poly_group_array[x]["uvs3_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs3_fmt"] == "2Floats":
+                                                    tu3 = readfloat(trmbf)
+                                                    tv3 = readfloat(trmbf)
+                                                    uv3_array.append((tu3, tv3))
+                                                else:
+                                                    raise AssertionError("Unknown uvs3 type!")
+
+                                                if poly_group_array[x]["uvs4_fmt"] == "None":
+                                                    pass
+                                                elif poly_group_array[x]["uvs4_fmt"] == "2Floats":
+                                                    tu4 = readfloat(trmbf)
+                                                    tv4 = readfloat(trmbf)
+                                                    uv4_array.append((tu4, tv4))
+                                                else:
+                                                    raise AssertionError("Unknown uvs4 type!")
+
+                                                if poly_group_array[x]["colors_fmt"] == "None":
+                                                    colorr = 255
+                                                    colorg = 255
+                                                    colorb = 255
+                                                    colora = 1
+                                                elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
+                                                    colorr = readbyte(trmbf)
+                                                    colorg = readbyte(trmbf)
+                                                    colorb = readbyte(trmbf)
+                                                    colora = readbyte(trmbf)
+                                                elif poly_group_array[x]["colors_fmt"] == "4Floats":
+                                                    colorr = readfloat(trmbf) * 255
+                                                    colorg = readfloat(trmbf) * 255
+                                                    colorb = readfloat(trmbf) * 255
+                                                    colora = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown colors type!")
+
+                                                if poly_group_array[x]["colors2_fmt"] == "None":
+                                                    colorr2 = 255
+                                                    colorg2 = 255
+                                                    colorb2 = 255
+                                                    colora2 = 1
+                                                elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
+                                                    colorr2 = readbyte(trmbf)
+                                                    colorg2 = readbyte(trmbf)
+                                                    colorb2 = readbyte(trmbf)
+                                                    colora2 = readbyte(trmbf)
+                                                elif poly_group_array[x]["colors2_fmt"] == "4Floats":
+                                                    colorr2 = readfloat(trmbf) * 255
+                                                    colorg2 = readfloat(trmbf) * 255
+                                                    colorb2 = readfloat(trmbf) * 255
+                                                    colora2 = readfloat(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown colors 2 type!")
+
+                                                if poly_group_array[x]["bones_fmt"] == "None":
+                                                    bone1 = 0
+                                                    bone2 = 0
+                                                    bone3 = 0
+                                                    bone4 = 0
+                                                elif poly_group_array[x]["bones_fmt"] == "4Bytes":
+                                                    bone1 = readbyte(trmbf)
+                                                    bone2 = readbyte(trmbf)
+                                                    bone3 = readbyte(trmbf)
+                                                    bone4 = readbyte(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown bones type!")
+
+                                                if poly_group_array[x]["weights_fmt"] == "None":
+                                                    weight1 = 0
+                                                    weight2 = 0
+                                                    weight3 = 0
+                                                    weight4 = 0
+                                                elif poly_group_array[x]["weights_fmt"] == "4ShortsAsFloat":
+                                                    weight1 = readshort(trmbf) / 65535
+                                                    weight2 = readshort(trmbf) / 65535
+                                                    weight3 = readshort(trmbf) / 65535
+                                                    weight4 = readshort(trmbf) / 65535
+                                                else:
+                                                    raise AssertionError("Unknown weights type!")
+                                                
+                                                if poly_group_array[x]["svunk_fmt"] == "None":
+                                                    SVUnk = 0
+                                                elif poly_group_array[x]["svunk_fmt"] == "1Long?":
+                                                    SVUnk = readlong(trmbf)
+                                                else:
+                                                    raise AssertionError("Unknown ?????? type!")
+                                                
+                                                vert_array.append((vx, vy, vz))
+                                                normal_array.append((nx, ny, nz))
+                                                
+                                                
+                                                uv_array.append((tu, tv))
+                                                
+                                                color_array.append((colorr, colorg, colorb))
+                                                alpha_array.append(colora)
+                                                if trskl is not None:
+                                                    w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
+                                                    b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
+
+                                        else:
+                                            MorphVert_array = []
+                                            MorphNormal_array = []
+                                            for v in range(int(vert_buffer_byte_count / 0x1C)):
+                                                #Morphs always seem to use this setup.
                                                 vx = readfloat(trmbf)
                                                 vy = readfloat(trmbf)
                                                 vz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown positions type!")
-
-                                            if poly_group_array[x]["normals_fmt"] == "4HalfFloats":
                                                 nx = readhalffloat(trmbf)
                                                 ny = readhalffloat(trmbf)
                                                 nz = readhalffloat(trmbf)
                                                 nq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["normals_fmt"] == "3Floats":
-                                                nx = readfloat(trmbf)
-                                                ny = readfloat(trmbf)
-                                                nz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown normals type!")
-
-                                            if poly_group_array[x]["tangents_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["tangents_fmt"] == "4HalfFloats":
                                                 tanx = readhalffloat(trmbf)
                                                 tany = readhalffloat(trmbf)
                                                 tanz = readhalffloat(trmbf)
                                                 tanq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["tangents_fmt"] == "3Floats":
-                                                tanx = readfloat(trmbf)
-                                                tany = readfloat(trmbf)
-                                                tanz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown tangents type!")
-
-                                            if poly_group_array[x]["bitangents_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["bitangents_fmt"] == "4HalfFloats":
-                                                bitanx = readhalffloat(trmbf)
-                                                bitany = readhalffloat(trmbf)
-                                                bitanz = readhalffloat(trmbf)
-                                                bitanq = readhalffloat(trmbf)
-                                            elif poly_group_array[x]["bitangents_fmt"] == "3Floats":
-                                                bitanx = readfloat(trmbf)
-                                                bitany = readfloat(trmbf)
-                                                bitanz = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown bitangents type!")
-
-                                            if poly_group_array[x]["uvs_fmt"] == "None":
-                                                tu = 0
-                                                tv = 0
-                                            elif poly_group_array[x]["uvs_fmt"] == "2Floats":
-                                                tu = readfloat(trmbf)
-                                                tv = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown uvs type!")
-
-                                            if poly_group_array[x]["uvs2_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs2_fmt"] == "2Floats":
-                                                tu2 = readfloat(trmbf)
-                                                tv2 = readfloat(trmbf)
-                                                uv2_array.append((tu2, tv2))
-                                            else:
-                                                raise AssertionError("Unknown uvs2 type!")
-
-                                            if poly_group_array[x]["uvs3_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs3_fmt"] == "2Floats":
-                                                tu3 = readfloat(trmbf)
-                                                tv3 = readfloat(trmbf)
-                                                uv3_array.append((tu3, tv3))
-                                            else:
-                                                raise AssertionError("Unknown uvs3 type!")
-
-                                            if poly_group_array[x]["uvs4_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["uvs4_fmt"] == "2Floats":
-                                                tu4 = readfloat(trmbf)
-                                                tv4 = readfloat(trmbf)
-                                                uv4_array.append((tu4, tv4))
-                                            else:
-                                                raise AssertionError("Unknown uvs4 type!")
-
-                                            if poly_group_array[x]["colors_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["colors_fmt"] == "4BytesAsFloat":
-                                                colorr = readbyte(trmbf)
-                                                colorg = readbyte(trmbf)
-                                                colorb = readbyte(trmbf)
-                                                colora = readbyte(trmbf)
-                                            elif poly_group_array[x]["colors_fmt"] == "4Floats":
-                                                colorr = readfloat(trmbf) * 255
-                                                colorg = readfloat(trmbf) * 255
-                                                colorb = readfloat(trmbf) * 255
-                                                colora = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown colors type!")
-
-                                            if poly_group_array[x]["colors2_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["colors2_fmt"] == "4BytesAsFloat":
-                                                colorr2 = readbyte(trmbf)
-                                                colorg2 = readbyte(trmbf)
-                                                colorb2 = readbyte(trmbf)
-                                                colora2 = readbyte(trmbf)
-                                            elif poly_group_array[x]["colors2_fmt"] == "4Floats":
-                                                colorr2 = readfloat(trmbf) * 255
-                                                colorg2 = readfloat(trmbf) * 255
-                                                colorb2 = readfloat(trmbf) * 255
-                                                colora2 = readfloat(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown colors 2 type!")
-
-                                            if poly_group_array[x]["bones_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["bones_fmt"] == "4Bytes":
-                                                bone1 = readbyte(trmbf)
-                                                bone2 = readbyte(trmbf)
-                                                bone3 = readbyte(trmbf)
-                                                bone4 = readbyte(trmbf)
-                                            else:
-                                                raise AssertionError("Unknown bones type!")
-
-                                            if poly_group_array[x]["weights_fmt"] == "None":
-                                                pass
-                                            elif poly_group_array[x]["weights_fmt"] == "4ShortsAsFloat":
-                                                weight1 = readshort(trmbf) / 65535
-                                                weight2 = readshort(trmbf) / 65535
-                                                weight3 = readshort(trmbf) / 65535
-                                                weight4 = readshort(trmbf) / 65535
-                                            else:
-                                                raise AssertionError("Unknown weights type!")
-
-                                            vert_array.append((vx, vy, vz))
-                                            normal_array.append((nx, ny, nz))
-                                            # color_array.append((colorr, colorg, colorb))
-                                            # alpha_array.append(colora)
-                                            uv_array.append((tu, tv))
-                                            w1_array.append({"weight1": weight1, "weight2": weight2, "weight3": weight3, "weight4": weight4})
-                                            b1_array.append({"bone1": bone1, "bone2": bone2, "bone3": bone3, "bone4": bone4})
-
-                                            # print(f"Vertex buffer {x} end: {hex(ftell(trmbf))}")
+                                                MorphVert_array.append((vx, vy, vz))
+                                                MorphNormal_array.append((nx, ny, nz))
+                                            Morphs_array.append(MorphVert_array)
+                                            #TODO: Continue implementing after line 3814
+                                    fseek(trmbf,vert_buffer_sub_ret)
 
                             if vert_buffer_struct_ptr_faces != 0:
                                 fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_faces)
@@ -1699,7 +1633,6 @@ def from_trmdl(filep, trmdl):
                                     face_buff_offset = ftell(trmbf) + readlong(trmbf)
                                     face_buff_ret = ftell(trmbf)
                                     fseek(trmbf, face_buff_offset)
-                                    print(f"Facepoint {x} header: {hex(ftell(trmbf))}")
                                     face_buff_struct = ftell(trmbf) - readlong(trmbf); fseek(trmbf, face_buff_struct)
                                     face_buff_struct_len = readshort(trmbf)
 
@@ -1712,8 +1645,7 @@ def from_trmdl(filep, trmdl):
                                         fseek(trmbf, face_buff_offset + face_buffer_struct_ptr)
                                         facepoint_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, facepoint_start)
                                         facepoint_byte_count = readlong(trmbf)
-                                        print(f"Facepoint {x} start: {hex(ftell(trmbf))}")
-
+                                        
                                         if len(vert_array) > 65536: # is this a typo? I would imagine it to be 65535
                                             for v in range(facepoint_byte_count // 12):
                                                 fa = readlong(trmbf)
@@ -1726,11 +1658,125 @@ def from_trmdl(filep, trmdl):
                                                 fb = readshort(trmbf)
                                                 fc = readshort(trmbf)
                                                 face_array.append([fa, fb, fc])
-                                        print(f"Facepoint {x} end: {hex(ftell(trmbf))}")
                                     fseek(trmbf, face_buff_ret)
-                            fseek(trmbf, vert_buffer_ret)
 
-                            print("Making object...")
+                            if vert_buffer_struct_ptr_groups != 0:
+                                fseek(trmbf, vert_buffer_offset + vert_buffer_struct_ptr_groups)
+                                group_start = ftell(trmbf) + readlong(trmbf); fseek(trmbf, group_start)
+                                group_count = readlong(trmbf)
+                                if group_count > 0:
+                                    MorphNameNext = 1
+                                    for g in range(group_count):
+                                        fseek(trmsh, groupoffset_array[g])
+                                        group_namestruct = ftell(trmsh) - readlong(trmsh)
+                                        fseek(trmsh, group_namestruct)
+                                        groupnamestructlen = readshort(trmsh)
+                                        if groupnamestructlen == 0x000A:
+                                            group_structsectionlen = readshort(trmsh)
+                                            group_structptrparama = readshort(trmsh)
+                                            group_structptrparammorph = readshort(trmsh)
+                                            group_structprtparamname = readshort(trmsh)
+                                        else:
+                                            raise AssertionError("Unexpected morph group buffer struct length!")
+                                        
+                                        fseek(trmsh, groupoffset_array[g] + group_structprtparamname)
+                                        group_nameoffset = ftell(trmsh) + readlong(trmsh)
+                                        fseek(trmsh, group_nameoffset)
+                                        group_namelen = readlong(trmsh)
+                                        group_name = readfixedstring(trmsh, group_namelen)
+                                        
+                                        
+                                        fseek(trmsh, groupoffset_array[g] + group_structptrparammorph)
+                                        group_morphoffset = ftell(trmsh) + readlong(trmsh)
+                                        fseek(trmsh, group_morphoffset)
+                                        group_morphnamecount = readlong(trmsh)
+                                        for y in range(group_morphnamecount):
+                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
+                                            group_morhpnameret = ftell(trmsh)
+                                            fseek(trmsh, group_morphnameoffset)
+                                            
+                                            group_namemorphstruct = ftell(trmsh) - readlong(trmsh)
+                                            fseek(trmsh, group_namemorphstruct)
+                                            group_namemorphstructlen = readshort(trmsh)
+                                            if group_namemorphstructlen == 0x000A:
+                                                group_namemorphstructsectionlen = readshort(trmsh)
+                                                group_namemorphstructptrparamid = readshort(trmsh)
+                                                group_namemorphstructptrparamname = readshort(trmsh)
+                                                group_namemorphstructptrparamflag = readshort(trmsh)
+                                            else:
+                                                raise AssertionError("Unexpected morph group buffer struct length!")
+                                            fseek(trmsh, group_morphnameoffset + group_namemorphstructptrparamname)
+                                            group_morphnameoffset = ftell(trmsh) + readlong(trmsh)
+                                            fseek(trmsh, group_morphnameoffset)
+                                            group_morphnamelen = readlong(trmsh)
+                                            group_morphname = readfixedstring(trmsh, group_morphnamelen)
+                                            MorphName_array.append(group_morphname)
+                                            fseek(trmsh, group_morhpnameret)
+                                        
+                                        MorphVertIDs_array = []
+                                        group_offset = ftell(trmbf) + readlong(trmbf)
+                                        group_ret = ftell(trmbf)
+                                        fseek(trmbf, group_offset)
+                                        group_struct = ftell(trmbf) - readlong(trmbf)
+                                        fseek(trmbf, group_struct)
+                                        group_structlen = readshort(trmbf)
+                                        if group_structlen == 0x0006:
+                                            group_structsectionlen = readshort(trmbf)
+                                            group_structptrparam = readshort(trmbf)
+                                        else:
+                                            raise AssertionError("Unexpected morph group buffer struct lenght!")
+                                        
+                                        fseek(trmbf, group_offset + group_structptrparam)
+                                        group_morphsoffset = ftell(trmbf) + readlong(trmbf)
+                                        fseek(trmbf, group_morphsoffset)
+                                        group_morphscount = readlong(trmbf)
+                                        
+                                        for y in range(group_morphscount):
+                                            morphgroupoffset = ftell(trmbf) + readlong(trmbf)
+                                            groupret = ftell(trmbf)
+                                            fseek(trmbf, morphgroupoffset)
+                                            bufferstruct = ftell(trmbf) - readlong(trmbf)
+                                            fseek(trmbf, bufferstruct)
+                                            morphbufferstructlen = readshort(trmbf)
+                                            if morphbufferstructlen == 0x0006:
+                                                morphbuffersectionlen = readshort(trmbf)
+                                                morphbufferstructptrparam = readshort(trmbf)
+                                            else:
+                                                raise AssertionError("Unexpected group sub buffer struct lenght!")
+                                            
+                                            fseek(trmbf, morphgroupoffset + morphbufferstructptrparam)
+                                            morphbuffergroupsuboffset = ftell(trmbf) + readlong(trmbf)
+                                            morphbuffergroupsbytecount = readlong(trmbf)
+                                            if y == 0:
+                                                for v in range(morphbuffergroupsbytecount // 0x04):
+                                                    MorphVertID = readlong(trmbf)
+                                                    MorphVertIDs_array.append(MorphVertID)
+                                            else:
+                                                MorphVert_array = []
+                                                MorphNormal_array = []
+                                                for v in range(len(vert_array)):
+                                                    MorphVert_array.append(vert_array[v])
+                                                    MorphNormal_array.append(normal_array[v])
+                                                for v in range(morphbuffergroupsbytecount // 0x1C):
+                                                    #Morphs always seem to use this setup.
+                                                    vx = readfloat(trmbf)
+                                                    vy = readfloat(trmbf)
+                                                    vz = readfloat(trmbf)
+                                                    nx = readhalffloat(trmbf)
+                                                    ny = readhalffloat(trmbf)
+                                                    nz = readhalffloat(trmbf)
+                                                    nq = readhalffloat(trmbf)
+                                                    tanx = readhalffloat(trmbf)
+                                                    tany = readhalffloat(trmbf)
+                                                    tanz = readhalffloat(trmbf)
+                                                    tanq = readhalffloat(trmbf)
+                                                    if MorphVertIDs_array[v] != 0:
+                                                        MorphVert_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + vx, vert_array[MorphVertIDs_array[v]][1] + vy, vert_array[MorphVertIDs_array[v]][2] + vz]
+                                                        MorphNormal_array[MorphVertIDs_array[v]] = [vert_array[MorphVertIDs_array[v]][0] + nx, vert_array[MorphVertIDs_array[v]][1] + ny, vert_array[MorphVertIDs_array[v]][2] + nz]
+                                                Morphs_array.append(MorphVert_array)
+                                            fseek(trmbf, groupret)
+                                        fseek(trmbf, group_ret)
+                            fseek(trmbf, vert_buffer_ret)                                                          
 
                             for b in range(len(w1_array)):
                                 w = {"boneids": [], "weights": []}
@@ -1758,10 +1804,20 @@ def from_trmdl(filep, trmdl):
                             if IN_BLENDER_ENV:
                                 # LINE 3257
 
-                                new_mesh = bpy.data.meshes.new(f"{poly_group_name}_mesh")
+                                new_mesh = bpy.data.meshes.new(poly_group_name)
                                 new_mesh.from_pydata(vert_array, [], face_array)
                                 new_mesh.update()
-                                new_object = bpy.data.objects.new(poly_group_name, new_mesh)
+                                for p in new_mesh.polygons:
+                                    p.use_smooth = True
+                                new_object = bpy.data.objects.new(poly_group_name.replace("_shape",""), new_mesh)
+                                if len(MorphName_array) > 0:
+                                    sk_basis = new_object.shape_key_add(name='Basis')
+                                    sk_basis.interpolation = 'KEY_LINEAR'
+                                    new_object.data.shape_keys.use_relative = True
+                                    for m in range(len(MorphName_array)):
+                                        sk = new_object.shape_key_add(name=MorphName_array[m])
+                                        for i in range(len(Morphs_array[m])):
+                                            sk.data[i].co = Morphs_array[m][i]
 
                                 if bone_structure != None:
                                     new_object.parent = bone_structure
@@ -1771,43 +1827,44 @@ def from_trmdl(filep, trmdl):
                                     for face in new_object.data.polygons:
                                         for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
                                             w = weight_array[vert_idx]
-
                                             for i in range(len(w["boneids"])):
-                                                bone_id = bone_id_map[w['boneids'][i]]
-                                                weight = w['weights'][i]
+                                                try:
+                                                    bone_id = bone_id_map[w['boneids'][i]]
+                                                except:
+                                                    bone_id = None
+                                                if bone_id:
+                                                    weight = w['weights'][i]
 
-                                                group = None
-                                                if new_object.vertex_groups.get(bone_id) == None:
-                                                    print(f"Creating vertex group {bone_id}")
-                                                    group = new_object.vertex_groups.new(name=bone_id)
-                                                else:
-                                                    group = new_object.vertex_groups[bone_id]
+                                                    group = None
+                                                    if new_object.vertex_groups.get(bone_id) == None:
+                                                        group = new_object.vertex_groups.new(name=bone_id)
+                                                    else:
+                                                        group = new_object.vertex_groups[bone_id]
 
-                                                group.add([vert_idx], weight, 'REPLACE')
+                                                    group.add([vert_idx], weight, 'REPLACE')
 
                                 # # vertex colours
-                                # color_layer = new_object.data.vertex_colors.new()
-                                # new_object.data.vertex_colors.active = color_layer
-                                #
-                                # print(f"color_array: {len(color_array)}")
-                                # print(f"polygons: {len(new_object.data.polygons)}")
-                                #
-                                # for i, poly in enumerate(new_object.data.polygons):
-                                #     print(f"poly: {i}")
-                                #     for v, vert in enumerate(poly.vertices):
-                                #         loop_index = poly.loop_indices[v]
-                                #
-                                #         # print(f"loop_index: {loop_index}")
-                                #         # print(f"vert: {vert}")
-                                #
-                                #         color_layer.data[loop_index].color = (color_array[vert][0] / 255, color_array[vert][1] / 255, color_array[vert][2] / 255, 1)
-
+                                color_layer = new_object.data.vertex_colors.new(name="Color")
+                                new_object.data.vertex_colors.active = color_layer
+                                #print(f"color_array: {len(color_array)}")
+                                #print(f"polygons: {len(new_object.data.polygons)}")
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    #print(f"poly: {i}")
+                                    for v, vert in enumerate(poly.vertices):
+                                        loop_index = poly.loop_indices[v]
+                                
+                                        #print(f"loop_index: {loop_index}")
+                                        #print(color_array[vert][0], color_array[vert][1], color_array[vert][2], alpha_array[vert])
+                                        
+                                        if alpha_array[vert] == 0:
+                                            alpha_array[vert] = 1
+                                        color_layer.data[loop_index].color = (color_array[vert][0] / alpha_array[vert], color_array[vert][1] / alpha_array[vert], color_array[vert][2] / alpha_array[vert], alpha_array[vert])
                                 for mat in materials:
-                                    new_object.data.materials.append(mat)
+                                    for x in range(len(mat_array)):
+                                        if mat.name.split(".")[0] == sorted(mat_array)[x]:
+                                            new_object.data.materials.append(mat)
 
                                 # materials
-                                for i, poly in enumerate(new_object.data.polygons):
-                                    poly.material_index = face_mat_id_array[i]
 
                                 # uvs
                                 uv_layers = new_object.data.uv_layers
@@ -1820,21 +1877,31 @@ def from_trmdl(filep, trmdl):
                                     uv4_layer = uv_layers.new(name="UV4Map")
                                 uv_layers.active = uv_layer
 
-                                for face in new_object.data.polygons:
-                                    for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
-                                        uv_layer.data[loop_idx].uv = uv_array[vert_idx]
-                                        if len(uv2_array) > 0:
-                                            uv2_layer.data[loop_idx].uv = uv2_array[vert_idx]
-                                        if len(uv3_array) > 0:
-                                            uv3_layer.data[loop_idx].uv = uv3_array[vert_idx]
-                                        if len(uv4_array) > 0:
-                                            uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
 
+
+
+                                for i, poly in enumerate(new_object.data.polygons):
+                                    for x in range(len(mat_array)):
+                                        if materials[face_mat_id_array[i]].name.split(".")[0] == sorted(mat_array)[x]:
+                                            poly.material_index = x
+
+                                try:
+                                    for face in new_object.data.polygons:
+                                        for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+                                            uv_layer.data[loop_idx].uv = uv_array[vert_idx]
+                                            if len(uv2_array) > 0:
+                                                uv2_layer.data[loop_idx].uv = uv2_array[vert_idx]
+                                            if len(uv3_array) > 0:
+                                                uv3_layer.data[loop_idx].uv = uv3_array[vert_idx]
+                                            if len(uv4_array) > 0:
+                                                uv4_layer.data[loop_idx].uv = uv4_array[vert_idx]
+                                except:
+                                    continue    
                                 #normals
-                                new_object.data.use_auto_smooth = True
+                                if blender_version[0] < 3:
+                                    new_object.data.use_auto_smooth = True
                                 new_object.data.normals_split_custom_set_from_vertices(normal_array)
-
-                                # add object to scene collection
+                                new_object.data.update()
                                 new_collection.objects.link(new_object)
 
 
@@ -1878,17 +1945,3 @@ def ftell(file):
 
 def fclose(file):
     file.close()
-
-def menu_func_import(self, context):
-    self.layout.operator(PokeArcImport.bl_idname, text="Legends Arceus (.trmdl)")
-        
-def register():
-    bpy.utils.register_class(PokeArcImport)
-    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    
-def unregister():
-    bpy.utils.unregister_class(PokeArcImport)
-    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
-
-if __name__ == "__main__":
-    register()
